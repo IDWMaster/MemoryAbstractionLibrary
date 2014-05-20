@@ -31,16 +31,18 @@ int main(int argc, char** argv) {
 	uint64_t rootPtr;
 	MemoryAllocator allocator(&str,rootPtr);
 	char sptr[2048];
+
+	while(true) {
 	if(rootPtr) {
 		StringObject obj;
 		uint64_t ptr = rootPtr;
 		while(ptr) {
 			allocator.str->Read(ptr,obj);
 			allocator.str->Read(ptr+sizeof(obj),sptr,obj.length);
+			std::cout<<sptr<<"\n";
 			ptr = obj.next;
 		}
 	}
-	while(true) {
 		std::cout<<"Options: \n0. Add entry\n1. Exit\n";
 		int selection;
 		std::cin>>selection;
