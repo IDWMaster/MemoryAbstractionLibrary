@@ -35,17 +35,19 @@ int main(int argc, char** argv) {
 	if(rootPtr) {
 		StringObject obj;
 		uint64_t ptr = rootPtr;
+		int i = 0;
 		while(ptr) {
 			allocator.str->Read(ptr,obj);
 			allocator.str->Read(ptr+sizeof(obj),sptr,obj.length);
 			sptr[obj.length] = 0;
-			std::cout<<sptr<<" AT: "<<ptr<<"\n";
+			std::cout<<i<<". "<<sptr<<" AT: "<<ptr<<"\n";
 			ptr = obj.next;
+			i++;
 		}
 	}
 
 	while(true) {
-		std::cout<<"Options: \n0. Add entry\n1. Exit\n";
+		std::cout<<"Options: \n0. Add entry\n1. Exit\n\n2. Delete entry";
 		int selection;
 		std::cin>>selection;
 		std::cin.ignore();
@@ -68,6 +70,32 @@ int main(int argc, char** argv) {
 			break;
 		case 1:
 			return 0;
+			break;
+		case 2:
+		{
+			std::cout<<"Enter the value to delete\n";
+			int selection;
+			std::cin>>selection;
+			std::cin.ignore();
+			uint64_t ptr = rootPtr;
+			uint64_t prevptr = 0;
+			StringObject prevobj;
+			StringObject mobj;
+			for(int i = 0;i<selection;i++) {
+				prevptr = ptr;
+				allocator.str->Read(ptr,prevobj);
+				ptr = prevobj.next;
+			}
+			allocator.str->Read(ptr,mobj);
+			if(prevptr !=0) {
+			prevobj.next = mobj.next;
+			allocator.str->Write(prevptr,prevobj);
+			}else {
+				//Remove first element by changing root pointer
+				allocator.SetRootPtr(mobj.next);
+			}
+			allocator.Free(ptr,sizeof(StringObject)+mobj.length);
+		}
 			break;
 		}
 	}
