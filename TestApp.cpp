@@ -23,5 +23,15 @@ int main(int argc, char** argv) {
 	}
 	int fd = open("test",O_RDWR);
 	MemoryMappedFileStream str(fd,ms.st_size);
+	uint64_t ptr;
+	MemoryAllocator allocator(&str,ptr);
+	if(ptr) {
+		Reference<int> mint(&str,ptr);
+		std::cout<<"Read value "<<mint<<".\n";
+	}else {
+		Reference<int> mint = allocator.Allocate<int>();
+		mint = 5;
+		std::cout<<"Wrote value "<<mint<<".\n";
+	}
 
 }

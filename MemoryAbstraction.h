@@ -101,6 +101,10 @@ public:
 	void WriteChunk(int idx, uint64_t val) {
 		str->Write(idx*8,val);
 	}
+	template<typename T>
+	void SetRootPtr(Reference<T> root) {
+		WriteChunk(numberOfChunks,root.offset);
+	}
 	uint64_t AllocateBytes(uint64_t size) {
 		if(size<sizeof(MemoryBlock)) {
 			size+=sizeof(MemoryBlock);
