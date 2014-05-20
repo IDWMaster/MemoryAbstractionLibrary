@@ -102,7 +102,7 @@ public:
 		str->Write(idx*8,val);
 	}
 	template<typename T>
-	void SetRootPtr(Reference<T> root) {
+	void SetRootPtr(const Reference<T>& root) {
 		WriteChunk(numberOfChunks,root.offset);
 	}
 	uint64_t AllocateBytes(uint64_t size) {
@@ -153,7 +153,11 @@ public:
 	}
 	MemoryAllocator(Stream* str, uint64_t& rootPtr) {
 		this->str = str;
-		uint64_t slen = str->GetLength();
+		uint64_t slen = ReadChunk(0);
+		if(slen == 0) {
+			slen = str->GetLength();
+			WriteChunk(0,slen);
+		}
 		numberOfChunks = log2(slen)+1;
 		rootPtr = ReadChunk(numberOfChunks);
 		if(!rootPtr) {
