@@ -175,8 +175,8 @@ public:
 		rootPtr = ReadChunk(numberOfChunks);
 		if(!rootPtr) {
 			//Compute space and write free block
-			uint64_t freespace = slen-((numberOfChunks+1)*8)-sizeof(MemoryBlock)-32;
-			RegisterFreeBlock((numberOfChunks+1)*8,freespace);
+			uint64_t freespace = slen-((numberOfChunks+2)*8)-sizeof(MemoryBlock)-32;
+			RegisterFreeBlock((numberOfChunks+2)*8,freespace);
 		}
 	}
 

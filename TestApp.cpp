@@ -32,7 +32,6 @@ int main(int argc, char** argv) {
 	MemoryAllocator allocator(&str,rootPtr);
 	char sptr[2048];
 
-	while(true) {
 	if(rootPtr) {
 		StringObject obj;
 		uint64_t ptr = rootPtr;
@@ -43,6 +42,8 @@ int main(int argc, char** argv) {
 			ptr = obj.next;
 		}
 	}
+
+	while(true) {
 		std::cout<<"Options: \n0. Add entry\n1. Exit\n";
 		int selection;
 		std::cin>>selection;
@@ -57,6 +58,7 @@ int main(int argc, char** argv) {
 			obj.next = rootPtr;
 			obj.length = count;
 			uint64_t ptr = allocator.Allocate(sizeof(StringObject)+count);
+			std::cout<<"Allocated pointer "<<ptr<<"\n";
 			allocator.str->Write(ptr,obj);
 			allocator.str->Write(ptr+sizeof(StringObject),sptr,count+sizeof(StringObject));
 			allocator.SetRootPtr(ptr);
