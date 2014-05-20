@@ -150,7 +150,7 @@ public:
 
 			uint64_t leftover = chunk.size-size-sizeof(MemoryBlock);
 			//Found free space! Register it.
-			RegisterFreeBlock(pointer,leftover);
+			RegisterFreeBlock(pointer+size,leftover);
 		}
 		return pointer;
 	}
@@ -161,7 +161,6 @@ public:
 		block.next = pointer;
 		block.prev = 0;
 		block.size = sz;
-		str->Write(position,block);
 		if(pointer) {
 			//Update linked list
 			MemoryBlock other;
@@ -169,6 +168,7 @@ public:
 			other.prev = position;
 			str->Write(pointer,other);
 		}
+		str->Write(position,block);
 		//Update root pointer
 		WriteChunk(chunkID,position);
 	}
