@@ -13,6 +13,11 @@
 using namespace std;
 using namespace MemoryAbstraction;
 unsigned char mander[1024*1024*50];
+class StringObject {
+public:
+	uint64_t next;
+	uint64_t length;
+};
 int main(int argc, char** argv) {
 	struct stat ms;
 	memset(mander,0,sizeof(mander));
@@ -23,19 +28,42 @@ int main(int argc, char** argv) {
 	}
 	int fd = open("test",O_RDWR);
 	MemoryMappedFileStream str(fd,ms.st_size);
-	uint64_t ptr;
-	MemoryAllocator allocator(&str,ptr);
-	if(ptr) {
-		Reference<int> mint(&str,ptr);
-		std::cout<<"Read value "<<mint<<" at offset "<<ptr<<".\n";
-	}else {
-		Reference<int> mint = allocator.Allocate<int>();
-		mint = 5;
-		std::cout<<"Wrote value "<<mint<<" at offset "<<mint.offset<<".\n";
-		allocator.SetRootPtr(mint);
-		MemoryAllocator mt(&str,ptr);
-		if(ptr != mint.offset) {
-			throw "houston";
+	uint64_t rootPtr;
+	MemoryAllocator allocator(&str,rootPtr);
+	char sptr[2048];
+	if(rootPtr) {
+		StringObject obj;
+		uint64_t ptr = rootPtr;
+		while(ptr) {
+			allocator.str->Read(ptr,obj);
+			allocator.str->Read(ptr+sizeof(obj),sptr,obj.length);
+			ptr = obj.next;
+		}
+	}
+	while(true) {
+		std::cout<<"Options: \n0. Add entry\n1. Exit\n";
+		int selection;
+		std::cin>>selection;
+		std::cin.ignore();
+		switch(selection) {
+		case 0:
+		{
+			std::cout<<"Enter string";
+			std::cin.getline(sptr,sizeof(sptr));
+			int count = strlen(sptr);
+			StringObject obj;
+			obj.next = rootPtr;
+			obj.length = count;
+			uint64_t ptr = allocator.Allocate(sizeof(StringObject)+count);
+			allocator.str->Write(ptr,obj);
+			allocator.str->Write(ptr+sizeof(StringObject),sptr,count+sizeof(StringObject));
+			allocator.SetRootPtr(ptr);
+			rootPtr = ptr;
+		}
+			break;
+		case 1:
+			return 0;
+			break;
 		}
 	}
 

@@ -111,6 +111,9 @@ public:
 	void WriteChunk(int idx, uint64_t val) {
 		str->Write(idx*8,val);
 	}
+	void SetRootPtr(uint64_t root) {
+			WriteChunk(numberOfChunks,root);
+		}
 	template<typename T>
 	void SetRootPtr(const Reference<T>& root) {
 		WriteChunk(numberOfChunks,root.offset);
@@ -176,17 +179,25 @@ public:
 			RegisterFreeBlock((numberOfChunks+1)*8,freespace);
 		}
 	}
+
+	void Free(uint64_t ptr, uint64_t sz) {
+		if(sz<sizeof(MemoryBlock)) {
+					sz+=sizeof(MemoryBlock);
+				}
+				RegisterFreeBlock(ptr,sz);
+
+	}
+	uint64_t Allocate(uint64_t sz) {
+		return AllocateBytes(sz);
+	}
 	template<typename T>
 	Reference<T> Allocate() {
-		return Reference<T>(str,AllocateBytes(sizeof(T)));
+		return Reference<T>(str,Allocate(sizeof(T)));
 	}
 	template<typename T>
 	void Free(const Reference<T>& ptr) {
 		int64_t sz = sizeof(T);
-		if(sz<sizeof(MemoryBlock)) {
-			sz+=sizeof(MemoryBlock);
-		}
-		RegisterFreeBlock(ptr.offset,sz);
+
 	}
 };
 
