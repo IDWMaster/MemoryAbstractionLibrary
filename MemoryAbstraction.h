@@ -158,6 +158,7 @@ public:
 		int chunkID = (int)log2(sz);
 		uint64_t pointer = ReadChunk(chunkID);
 		MemoryBlock block;
+		block.next = pointer;
 		block.prev = 0;
 		block.size = sz;
 		str->Write(position,block);
