@@ -145,6 +145,13 @@ public:
 			str->Write(chunk.next,other);
 		}
 		WriteChunk(chunkID,chunk.next);
+		//Check if we have additional free space after this block
+		if(chunk.size-size>sizeof(MemoryBlock)) {
+
+			uint64_t leftover = chunk.size-size-sizeof(MemoryBlock);
+			//Found free space! Register it.
+			RegisterFreeBlock(pointer,leftover);
+		}
 		return pointer;
 	}
 	void RegisterFreeBlock(uint64_t position, uint64_t sz) {
