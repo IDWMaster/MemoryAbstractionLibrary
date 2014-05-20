@@ -38,7 +38,8 @@ int main(int argc, char** argv) {
 		while(ptr) {
 			allocator.str->Read(ptr,obj);
 			allocator.str->Read(ptr+sizeof(obj),sptr,obj.length);
-			std::cout<<sptr<<"\n";
+			sptr[obj.length] = 0;
+			std::cout<<sptr<<" AT: "<<ptr<<"\n";
 			ptr = obj.next;
 		}
 	}
