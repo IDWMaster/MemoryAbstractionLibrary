@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 	int fd = open("test",O_RDWR);
 	MemoryMappedFileStream str(fd,ms.st_size);
 	uint64_t rootPtr;
-	MemoryAllocator allocator(&str,rootPtr);
+	MemoryAllocator allocator(&str,rootPtr,sizeof(mander));
 	char sptr[2048];
 
 	if(rootPtr) {
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 	}
 
 	while(true) {
-		std::cout<<"Options: \n0. Add entry\n1. Exit\n\n2. Delete entry";
+		std::cout<<"Options: \n0. Add entry\n1. Exit\n2. Delete entry\n";
 		int selection;
 		std::cin>>selection;
 		std::cin.ignore();

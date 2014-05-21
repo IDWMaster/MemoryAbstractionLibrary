@@ -172,13 +172,9 @@ public:
 		//Update root pointer
 		WriteChunk(chunkID,position);
 	}
-	MemoryAllocator(Stream* str, uint64_t& rootPtr) {
+	MemoryAllocator(Stream* str, uint64_t& rootPtr, uint64_t mappedLen) {
 		this->str = str;
-		uint64_t slen = ReadChunk(0);
-		if(slen == 0) {
-			slen = str->GetLength();
-			WriteChunk(0,slen);
-		}
+		uint64_t slen = mappedLen;
 		numberOfChunks = log2(slen)+1;
 		rootPtr = ReadChunk(numberOfChunks);
 		if(!rootPtr) {
