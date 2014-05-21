@@ -19,6 +19,26 @@ public:
 	uint64_t length;
 };
 int main(int argc, char** argv) {
+	//New program
+	int egers[20];
+	size_t len = 0;
+	BinaryInsert(egers,len,1);
+  	BinaryInsert(egers,len,5);
+ 	BinaryInsert(egers,len,9);
+	BinaryInsert(egers,len,0);
+	BinaryInsert(egers,len,4);
+	return 0;
+
+
+
+
+
+
+
+
+	//Old program
+
+
 	struct stat ms;
 	memset(mander,0,sizeof(mander));
 	if(stat("test",&ms)) {

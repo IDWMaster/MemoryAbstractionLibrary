@@ -62,6 +62,9 @@ public:
 		str->Write(offset,other);
 		return *this;
 	}
+	Reference() {
+
+	}
 
 };
 class MemoryMappedFileStream:public Stream {
@@ -205,6 +208,95 @@ public:
 	}
 };
 
+template<typename T>
+static size_t BinarySearch(T* A,size_t arrlen, const T& key, int& insertionMarker) {
+	if(arrlen == 0) {
+		insertionMarker = 0;
+		return -1;
+	}
+	int max = arrlen-1;
+	int min = 0;
+	while(max>=min) {
+		insertionMarker = min+((max-min)/2);
+		if(A[insertionMarker] == key) {
+			return insertionMarker;
+		}
+		if(A[insertionMarker]<key) {
+			min = insertionMarker+1;
+		}else {
+			max = insertionMarker-1;
+		}
+	}
+	return -1;
+}
+template<typename T>
+static void BinaryInsert(T* A, size_t& len, const T& key) {
+	if(len == 0) {
+		A[0] = key;
+		len++;
+		return;
+	}
+	int location;
+	BinarySearch(A,len,key,location);
+	if(key<A[location]) {
+		//Insert to left of location
+		//Move everything at location to the right
+		memmove(A+location+1,A+location,(len-location)*sizeof(T));
+		//Insert value
+		A[location] = key;
+	}else {
+		//Insert to right of location (this is ALWAYS called at end of list, so memmove is not necessary)
+		location++;
+		A[location] = key;
+	}
+	len++;
+}
+
+
+//Represents a B-tree
+template<typename T, uint64_t KeyCount = 1024>
+class BTree {
+private:
+	class Node {
+	public:
+		//The length of the keys array
+		int length;
+		//Keys within this node
+		T keys[KeyCount];
+		//The child nodes (subtrees)
+		uint64_t children[KeyCount+1];
+		Node() {
+			memset(keys,0,sizeof(keys));
+			memset(children,0,sizeof(children));
+			length = 0;
+		}
+	};
+	Reference<Node> root;
+	//Node is a leaf if it has no children
+	bool IsLeaf(const Node& val) {
+		for(size_t i = 0;i<KeyCount+1;i++) {
+			if(val.children[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+
+public:
+	MemoryAllocator* allocator;
+	BTree(MemoryAllocator* allocator, Reference<Node> root) {
+		this->allocator = allocator;
+		this->root = root;
+	}
+	void Insert(T value) {
+		//Find a leaf node
+		Reference<Node> current = root;
+		while(!IsLeaf(current)) {
+
+		}
+	}
+};
 
 
 }
