@@ -33,20 +33,19 @@ int main(int argc, char** argv) {
 		uint64_t rootptr;
 		MemoryAllocator m(&mstr,rootptr,sizeof(mander));
 
-	Reference<BTree<int>::Node> mref;
+	Reference<BTree<int,2>::Node> mref;
 	if(rootptr == 0) {
-		mref = m.Allocate<BTree<int>::Node>();
-
+		mref = m.Allocate<BTree<int,2>::Node>();
 	}else {
-		mref = Reference<BTree<int>::Node>(&mstr,rootptr);
+		mref = Reference<BTree<int,2>::Node>(&mstr,rootptr);
 	}
-	BTree<int> tree(m,mref);
+	BTree<int,2> tree(&m,mref);
 	tree.Insert(2);
 	tree.Insert(5);
 	tree.Insert(1);
 	tree.Insert(4);
 
-	int searchvalue = 2;
+	int searchvalue = 4;
 	bool rval = tree.Find(searchvalue);
 	searchvalue = 0;
 	rval = tree.Find(searchvalue);
@@ -54,7 +53,7 @@ int main(int argc, char** argv) {
 
 	//New program
 	int egers[20];
-	size_t len = 0;
+	int32_t len = 0;
 	BinaryInsert(egers,len,6);
   	BinaryInsert(egers,len,5);
  	BinaryInsert(egers,len,9);
@@ -62,7 +61,7 @@ int main(int argc, char** argv) {
 	BinaryInsert(egers,len,4);
 	return 0;
 
-
+/*
 
 
 
@@ -152,5 +151,6 @@ int main(int argc, char** argv) {
 			break;
 		}
 	}
+	*/
 
 }

@@ -63,10 +63,7 @@ public:
 		str->Write(offset,other);
 		return *this;
 	}
-	const T* operator->() {
-		rval = (T)(*this);
-		return &rval;
-	}
+
 	Reference() {
 
 	}
@@ -84,6 +81,9 @@ public:
 		this->fd = fd;
 		this->sz = sz;
 		ptr = (unsigned char*)mmap(0,sz,PROT_READ | PROT_WRITE, MAP_SHARED, fd,0);
+		if((size_t)ptr == -1) {
+			ptr = (unsigned char*)mmap(0,sz,PROT_READ | PROT_WRITE, MAP_SHARED, fd,0);
+		}
 	}
 	int Read(uint64_t position, void* buffer, int count) {
 		if(position>sz) {
@@ -204,7 +204,10 @@ public:
 	}
 	template<typename T>
 	Reference<T> Allocate() {
-		return Reference<T>(str,Allocate(sizeof(T)));
+		T val;
+		Reference<T> rval = Reference<T>(str,Allocate(sizeof(T)));
+		rval = val;
+		return rval;
 	}
 	template<typename T>
 	void Free(const Reference<T>& ptr) {
@@ -235,7 +238,7 @@ static size_t BinarySearch(const T* A,size_t arrlen, const T& key, int& insertio
 	return -1;
 }
 template<typename T>
-static void BinaryInsert(T* A, size_t& len, const T& key) {
+static void BinaryInsert(T* A, int32_t& len, const T& key) {
 	if(len == 0) {
 		A[0] = key;
 		len++;
@@ -261,20 +264,6 @@ static void BinaryInsert(T* A, size_t& len, const T& key) {
 //Represents a B-tree
 template<typename T, uint64_t KeyCount = 1024>
 class BTree {
-private:
-
-	Reference<Node> root;
-	//Node is a leaf if it has no children
-	bool IsLeaf(const Node& val) {
-		for(size_t i = 0;i<KeyCount+1;i++) {
-			if(val.children[i]) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-
 public:
 	class Node {
 		public:
@@ -293,6 +282,16 @@ public:
 				length = 0;
 			}
 		};
+	//Node is a leaf if it has no children
+		bool IsLeaf(const Node& val) {
+			for(size_t i = 0;i<KeyCount+1;i++) {
+				if(val.children[i]) {
+					return false;
+				}
+			}
+			return true;
+		}
+	Reference<Node> root;
 	MemoryAllocator* allocator;
 	BTree(MemoryAllocator* allocator, Reference<Node> root) {
 		this->allocator = allocator;
@@ -300,11 +299,12 @@ public:
 	}
 	bool Find(T& value, Reference<Node> root) {
 
-		Reference<Node> current = root;
+		Reference<Node> currentPtr = root;
 		while(true) {
+			Node current = currentPtr;
 			int marker;
-			if(BinarySearch(current->keys,current->length,value,marker) !=-1) {
-				value = current->keys[marker];
+			if(BinarySearch(current.keys,current.length,value,marker) !=-1) {
+				value = current.keys[marker];
 				return true;
 			}
 			//Are there sub-trees?
@@ -312,12 +312,12 @@ public:
 				return false;
 			}
 			//Find the appropriate sub-tree and traverse it
-			if(value<current->keys[marker]) {
+			if(value<current.keys[marker]) {
 				//Take the left sub-tree
-				current = Reference<Node>(allocator->str,current->keys[marker]);
+				current = Reference<Node>(allocator->str,current.keys[marker]);
 			}else {
 				//Take the right sub-tree
-				current = Reference<Node>(allocator->str,current->keys[marker+1]);
+				current = Reference<Node>(allocator->str,current.keys[marker+1]);
 			}
 		}
 		return false;
@@ -330,19 +330,20 @@ public:
 		Reference<Node> current = root;
 		while(!IsLeaf(current)) {
 			//Scan for the insertion point
+			Node node = current;
 			int marker;
-			BinarySearch(current->keys,current->length,value,marker);
-			if(value<current->keys[marker]) {
+			BinarySearch(node.keys,node.length,value,marker);
+			if(value<node.keys[marker]) {
 				//Proceed along the left sub-tree
-				current = Reference<Node>(allocator->str,current->children[marker]);
+				current = Reference<Node>(allocator->str,node.children[marker]);
 
 			}else {
 				//Proceed along the right sub-tree
-				current = Reference<Node>(allocator->str,current->children[marker+1]);
+				current = Reference<Node>(allocator->str,node.children[marker+1]);
 			}
 		}
-		//We've found a leaf!
 		Node node = current;
+		//We've found a leaf!
 		if(node.length<KeyCount) {
 			//We can just do the insertion
 			BinaryInsert(node.keys,node.length,value);
@@ -355,50 +356,52 @@ public:
 		int medianIdx = node.length/2;
 		T medianValue = node.keys[medianIdx];
 		//Values less than median go in left, greater than go in right node (new nodes allocated)
-		Reference<Node> left = allocator->Allocate<Node>();
-		Reference<Node> right = allocator->Allocate<Node>();
-		left->length = medianIdx;
-		right->length = medianIdx;
+		Reference<Node> leftPtr = allocator->Allocate<Node>();
+		Reference<Node> rightPtr = allocator->Allocate<Node>();
+		Node left = leftPtr;
+		Node right = rightPtr;
+		left.length = medianIdx;
+		right.length = medianIdx;
 		//Perform copy
-		memcpy(left->keys,node.keys,medianIdx);
-		memcpy(right->keys,node.keys+medianIdx+1,medianIdx);
-		left->parent = node.parent;
-		right->parent = node.parent;
+		memcpy(left.keys,node.keys,medianIdx);
+		memcpy(right.keys,node.keys+medianIdx+1,medianIdx);
+		left.parent = node.parent;
+		right.parent = node.parent;
 		//Insert the left and right trees into the parent node
 		if(node.parent == 0) {
 			//We are at the root, add a new root above our node and add us as a child
 			Reference<Node> newRoot = allocator->Allocate<Node>();
 			this->root = newRoot;
-			left->parent = newRoot;
-			right->parent = newRoot;
+			left.parent = newRoot.offset;
+			right.parent = newRoot.offset;
 		}
-			Reference<Node> parentPtr = Reference<Node>(allocator->str,left->parent);
+			Reference<Node> parentPtr = Reference<Node>(allocator->str,left.parent);
 			Node parent = parentPtr;
 			//Insert the median into the parent (which may cause it to split as well)
 			Insert(medianValue,parentPtr);
 			//Make left and right sub-trees children of parent
 			//Compute the insertion marker for the left sub-tree
 			int marker;
-			BinarySearch(parent.keys,parent.length,left->keys[0],marker);
-			if(left->keys[0]<parent.keys[marker]) {
+			BinarySearch(parent.keys,parent.length,left.keys[0],marker);
+			if(left.keys[0]<parent.keys[marker]) {
 				//Insert to left of key
-				parent.keys[marker] = left;
+				parent.keys[marker] = leftPtr.offset;
 			}else {
 				//Insert to right of key
-				parent.keys[marker+1] = left;
+				parent.keys[marker+1] = leftPtr.offset;
 			}
-			BinarySearch(parent.keys,parent.length,right->keys[0],marker);
-			if (left->keys[0] < parent.keys[marker]) {
+			BinarySearch(parent.keys,parent.length,right.keys[0],marker);
+			if (left.keys[0] < parent.keys[marker]) {
 				//Insert to left of key
-				parent.keys[marker] = left;
+				parent.keys[marker] = rightPtr.offset;
 			} else {
 				//Insert to right of key
-				parent.keys[marker + 1] = left;
+				parent.keys[marker + 1] = rightPtr.offset;
 			}
 			//Update nodes
 			parentPtr = parent;
-			left = left.rval;
-			right = right.rval;
+			leftPtr = left;
+			rightPtr = right;
 
 		}
 	void Insert(const T& val) {
