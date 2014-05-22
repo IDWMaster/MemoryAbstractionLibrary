@@ -351,6 +351,9 @@ public:
 			current = node;
 			return;
 		}
+		//Full node -- needs split; don't keep on disk anymore
+		allocator->Free(current);
+
 		//The node is full. Insert the new value and then split this node
 		BinaryInsert(node.keys,node.length,value);
 		int medianIdx = node.length/2;
