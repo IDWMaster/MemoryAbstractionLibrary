@@ -298,10 +298,8 @@ public:
 		this->root = root;
 	}
 	bool Find(T& value, Reference<Node> root) {
-
-		Reference<Node> currentPtr = root;
+			Node current = root;
 		while(true) {
-			Node current = currentPtr;
 			int marker;
 			if(BinarySearch(current.keys,current.length,value,marker) !=-1) {
 				value = current.keys[marker];
@@ -314,10 +312,10 @@ public:
 			//Find the appropriate sub-tree and traverse it
 			if(value<current.keys[marker]) {
 				//Take the left sub-tree
-				current = Reference<Node>(allocator->str,current.keys[marker]);
+				current = Reference<Node>(allocator->str,current.children[marker]);
 			}else {
 				//Take the right sub-tree
-				current = Reference<Node>(allocator->str,current.keys[marker+1]);
+				current = Reference<Node>(allocator->str,current.children[marker+1]);
 			}
 		}
 		return false;
@@ -396,7 +394,7 @@ public:
 				parent.children[marker+1] = leftPtr.offset;
 			}
 			BinarySearch(parent.keys,parent.length,right.keys[0],marker);
-			if (left.keys[0] < parent.keys[marker]) {
+			if (right.keys[0] < parent.keys[marker]) {
 				//Insert to left of key
 				parent.children[marker] = rightPtr.offset;
 			} else {
