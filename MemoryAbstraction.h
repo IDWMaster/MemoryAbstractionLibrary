@@ -379,24 +379,26 @@ public:
 			Node parent = parentPtr;
 			//Insert the median into the parent (which may cause it to split as well)
 			Insert(medianValue,parentPtr);
+			//Refresh the parent
+			parent = parentPtr;
 			//Make left and right sub-trees children of parent
 			//Compute the insertion marker for the left sub-tree
 			int marker;
 			BinarySearch(parent.keys,parent.length,left.keys[0],marker);
 			if(left.keys[0]<parent.keys[marker]) {
 				//Insert to left of key
-				parent.keys[marker] = leftPtr.offset;
+				parent.children[marker] = leftPtr.offset;
 			}else {
 				//Insert to right of key
-				parent.keys[marker+1] = leftPtr.offset;
+				parent.children[marker+1] = leftPtr.offset;
 			}
 			BinarySearch(parent.keys,parent.length,right.keys[0],marker);
 			if (left.keys[0] < parent.keys[marker]) {
 				//Insert to left of key
-				parent.keys[marker] = rightPtr.offset;
+				parent.children[marker] = rightPtr.offset;
 			} else {
 				//Insert to right of key
-				parent.keys[marker + 1] = rightPtr.offset;
+				parent.children[marker + 1] = rightPtr.offset;
 			}
 			//Update nodes
 			parentPtr = parent;
