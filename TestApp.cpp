@@ -19,10 +19,43 @@ public:
 	uint64_t length;
 };
 int main(int argc, char** argv) {
+	//EVEN newer program: TODO: Not written yet -- happens in future event
+	//Newer program
+	struct stat ms;
+		memset(mander,0,sizeof(mander));
+		if(stat("test",&ms)) {
+			FILE* mptr = fopen("test","wb");
+			fwrite(mander,1,sizeof(mander),mptr);
+			fclose(mptr);
+		}
+		int fd = open("test",O_RDWR);
+		MemoryMappedFileStream mstr(fd,ms.st_size);
+		uint64_t rootptr;
+		MemoryAllocator m(&mstr,rootptr,sizeof(mander));
+
+	Reference<BTree<int>::Node> mref;
+	if(rootptr == 0) {
+		mref = m.Allocate<BTree<int>::Node>();
+
+	}else {
+		mref = Reference<BTree<int>::Node>(&mstr,rootptr);
+	}
+	BTree<int> tree(m,mref);
+	tree.Insert(2);
+	tree.Insert(5);
+	tree.Insert(1);
+	tree.Insert(4);
+
+	int searchvalue = 2;
+	bool rval = tree.Find(searchvalue);
+	searchvalue = 0;
+	rval = tree.Find(searchvalue);
+	return 0;
+
 	//New program
 	int egers[20];
 	size_t len = 0;
-	BinaryInsert(egers,len,1);
+	BinaryInsert(egers,len,6);
   	BinaryInsert(egers,len,5);
  	BinaryInsert(egers,len,9);
 	BinaryInsert(egers,len,0);
