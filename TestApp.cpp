@@ -18,6 +18,30 @@ public:
 	uint64_t next;
 	uint64_t length;
 };
+
+
+class FileEntry {
+public:
+	char filename[256];
+	int metadata;
+	FileEntry() {
+		memset(filename,0,sizeof(filename));
+		metadata = 0;
+	}
+	FileEntry(const std::string& fname) {
+		memset(filename,0,sizeof(filename));
+		memcpy(filename,fname.data(),fname.size());
+		metadata = 0;
+	}
+	bool operator<(const FileEntry& other) const {
+		return strcmp(filename,other.filename)<0;
+	}
+	bool operator==(const FileEntry& other) const {
+		return strcmp(filename,other.filename) == 0;
+	}
+
+};
+
 int main(int argc, char** argv) {
 	//EVEN newer program: TODO: Not written yet -- happens in future event
 	//Newer program
@@ -33,21 +57,29 @@ int main(int argc, char** argv) {
 		uint64_t rootptr;
 		MemoryAllocator m(&mstr,rootptr,sizeof(mander));
 
-	Reference<BTree<int,2>::Node> mref;
+	Reference<BTree<FileEntry,2>::Node> mref;
 	if(rootptr == 0) {
-		mref = m.Allocate<BTree<int,2>::Node>();
+		mref = m.Allocate<BTree<FileEntry,2>::Node>();
 	}else {
-		mref = Reference<BTree<int,2>::Node>(&mstr,rootptr);
+		mref = Reference<BTree<FileEntry,2>::Node>(&mstr,rootptr);
 	}
-	BTree<int,2> tree(&m,mref);
-	tree.Insert(2);
-	tree.Insert(5);
-	tree.Insert(1);
-	tree.Insert(4);
+	BTree<FileEntry,2> tree(&m,mref);
 
-	int searchvalue = 4;
+	FileEntry searchvalue;
+	searchvalue = std::string("test");
+	tree.Insert(searchvalue);
+	searchvalue = std::string("hello world");
+	tree.Insert(searchvalue);
+	searchvalue = std::string("other world");
+	//It's OVER 9000! WOW!
+	searchvalue.metadata = 9001;
+	tree.Insert(searchvalue);
+	searchvalue = std::string("world");
+	tree.Insert(searchvalue);
+
+	searchvalue = std::string("other world");
 	bool rval = tree.Find(searchvalue);
-	searchvalue = 0;
+	searchvalue = std::string("goodbye");
 	rval = tree.Find(searchvalue);
 	return 0;
 
