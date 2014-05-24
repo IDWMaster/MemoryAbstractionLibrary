@@ -297,6 +297,13 @@ public:
 		this->allocator = allocator;
 		this->root = root;
 	}
+	BTree(MemoryAllocator* allocator, uint64_t rootPtr) {
+		this->allocator = allocator;
+		this->root = Reference<Node>(allocator->str,rootPtr);
+	}
+	BTree() {
+		this->allocator = 0;
+	}
 	bool Find(T& value, Reference<Node> root) {
 			Node current = root;
 		while(true) {
@@ -412,6 +419,10 @@ public:
 	}
 
 };
+
+
+
+
 
 
 }
