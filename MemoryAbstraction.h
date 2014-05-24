@@ -427,23 +427,6 @@ public:
 		Insert(val,root);
 	}
 
-
-
-	//DATABASE-RELATED commands
-	//Finds all nodes matching the specified key
-	template<typename F>
-	void FindAll(const T& key, const F& callback) {
-		Node current = root;
-		int marker = 0;
-		T val = key;
-		while(Find(val,current,marker,marker)) {
-			if(!callback(val)) {
-				break;
-			}
-		}
-	}
-	//End database-related commands
-
 };
 
 
