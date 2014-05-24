@@ -434,17 +434,19 @@ public:
 	//Helper functions
 	template<typename F>
 	void Traverse(Node root, const F& callback) {
-		for(int i = 0;i<KeyCount+1;i++) {
-			if(root.children[i] ==0) {
-				break;
+		for(int i = 0;i<root.length;i++) {
+			//Traverse left sub-tree if exists
+			if(root.children[i]) {
+				Traverse(Reference<Node>(allocator->str,root.children[i]),callback);
 			}
-			Traverse(Reference<Node>(allocator->str,root.children[i]),callback);
+			//Callback
+			callback(root.keys[i]);
+			//Traverse right sub-tree if exists
+			if(root.children[i+1]) {
+				Traverse(Reference<Node>(allocator->str,root.children[i+1]),callback);
+			}
+		}
 
-		}
-		//Use C++
-		for(int c = 0;c<root.length;c++) {
-			callback(root.keys[c]);
-		}
 	}
 	template<typename F>
 	void Traverse(const F& callback) {

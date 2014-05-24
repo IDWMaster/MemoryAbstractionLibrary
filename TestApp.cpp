@@ -66,15 +66,15 @@ int main(int argc, char** argv) {
 	BTree<FileEntry,2> tree(&m,mref);
 
 	FileEntry searchvalue;
-	searchvalue = std::string("test");
+	searchvalue = std::string("d");
 	tree.Insert(searchvalue);
-	searchvalue = std::string("hello world");
+	searchvalue = std::string("b");
 	tree.Insert(searchvalue);
-	searchvalue = std::string("other world");
+	searchvalue = std::string("c");
 	//It's OVER 9000! WOW!
 	searchvalue.metadata = 9001;
 	tree.Insert(searchvalue);
-	searchvalue = std::string("world");
+	searchvalue = std::string("a");
 	tree.Insert(searchvalue);
 
 	searchvalue = std::string("test");
