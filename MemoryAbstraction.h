@@ -299,36 +299,45 @@ public:
 	}
 	BTree(MemoryAllocator* allocator, uint64_t rootPtr) {
 		this->allocator = allocator;
+		if(rootPtr !=0) {
 		this->root = Reference<Node>(allocator->str,rootPtr);
+		}else {
+			//Allocate our root node
+			this->root = allocator->Allocate<Node>();
+		}
 	}
 	BTree() {
 		this->allocator = 0;
 	}
-	bool Find(T& value, Reference<Node> root) {
-			Node current = root;
+	bool Find(T& value, Node& current, int& marker, int offset = 0) {
 		while(true) {
-			int marker;
-			if(BinarySearch(current.keys,current.length,value,marker) !=-1) {
-				value = current.keys[marker];
+			if(BinarySearch(current.keys+offset,current.length-offset,value,marker) !=-1) {
+				value = current.keys[marker+offset];
+				marker = marker+offset;
 				return true;
 			}
 			//Are there sub-trees?
 			if(IsLeaf(current)) {
+				marker = marker+offset;
 				return false;
 			}
 			//Find the appropriate sub-tree and traverse it
-			if(value<current.keys[marker]) {
+			if(value<current.keys[marker+offset]) {
 				//Take the left sub-tree
-				current = Reference<Node>(allocator->str,current.children[marker]);
+				current = Reference<Node>(allocator->str,current.children[marker+offset]);
 			}else {
 				//Take the right sub-tree
-				current = Reference<Node>(allocator->str,current.children[marker+1]);
+				current = Reference<Node>(allocator->str,current.children[marker+offset+1]);
 			}
 		}
+		marker = marker+offset;
 		return false;
 	}
+	//Finds the first element matching the specified key
 	bool Find(T& value) {
-		return Find(value,root);
+		Node current = root;
+		int marker = 0;
+		return Find(value,current,marker);
 	}
 	void Insert(T value, Reference<Node> root) {
 		//Find a leaf node
@@ -418,10 +427,24 @@ public:
 		Insert(val,root);
 	}
 
+
+
+	//DATABASE-RELATED commands
+	//Finds all nodes matching the specified key
+	template<typename F>
+	void FindAll(const T& key, const F& callback) {
+		Node current = root;
+		int marker = 0;
+		T val = key;
+		while(Find(val,current,marker,marker)) {
+			if(!callback(val)) {
+				break;
+			}
+		}
+	}
+	//End database-related commands
+
 };
-
-
-
 
 
 

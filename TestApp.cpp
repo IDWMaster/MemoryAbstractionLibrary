@@ -74,11 +74,18 @@ int main(int argc, char** argv) {
 	//It's OVER 9000! WOW!
 	searchvalue.metadata = 9001;
 	tree.Insert(searchvalue);
+	tree.Insert(searchvalue);
+	tree.Insert(searchvalue);
+	tree.Insert(searchvalue);
 	searchvalue = std::string("world");
 	tree.Insert(searchvalue);
 
 	searchvalue = std::string("other world");
 	bool rval = tree.Find(searchvalue);
+	tree.FindAll(searchvalue,[&](const FileEntry& entry){
+		std::cout<<"Found "<<entry.filename<<" with metadata "<<entry.metadata<<"\n";
+		return true;
+	});
 	searchvalue = std::string("goodbye");
 	rval = tree.Find(searchvalue);
 	return 0;
