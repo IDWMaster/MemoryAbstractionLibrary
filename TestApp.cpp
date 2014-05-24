@@ -77,10 +77,13 @@ int main(int argc, char** argv) {
 	searchvalue = std::string("world");
 	tree.Insert(searchvalue);
 
-	searchvalue = std::string("other world");
+	searchvalue = std::string("test");
 	bool rval = tree.Find(searchvalue);
 	searchvalue = std::string("goodbye");
 	rval = tree.Find(searchvalue);
+	tree.Traverse([=](const FileEntry& val){
+ 					std::cout<<val.filename<<"\n";
+				});
 	return 0;
 
 	//New program

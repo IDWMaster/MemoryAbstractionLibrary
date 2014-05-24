@@ -90,6 +90,9 @@ public:
 			return 0;
 		}
 		int available = std::min((int)(sz-position),count);
+		if(available<0) {
+			available = count;
+		}
 		memcpy(buffer,ptr+position,available);
 		return available;
 	}
@@ -380,8 +383,8 @@ public:
 		left.length = medianIdx;
 		right.length = medianIdx;
 		//Perform copy
-		memcpy(left.keys,node.keys,medianIdx);
-		memcpy(right.keys,node.keys+medianIdx+1,medianIdx);
+		memcpy(left.keys,node.keys,medianIdx*sizeof(T));
+		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(T));
 		left.parent = node.parent;
 		right.parent = node.parent;
 		//Insert the left and right trees into the parent node
@@ -426,6 +429,29 @@ public:
 	void Insert(const T& val) {
 		Insert(val,root);
 	}
+
+
+	//Helper functions
+	template<typename F>
+	void Traverse(Node root, const F& callback) {
+		for(int i = 0;i<KeyCount+1;i++) {
+			if(root.children[i] ==0) {
+				break;
+			}
+			Traverse(Reference<Node>(allocator->str,root.children[i]),callback);
+
+		}
+		//Use C++
+		for(int c = 0;c<root.length;c++) {
+			callback(root.keys[c]);
+		}
+	}
+	template<typename F>
+	void Traverse(const F& callback) {
+		Traverse(root,callback);
+	}
+	//End helper functions
+
 
 };
 
