@@ -312,7 +312,11 @@ public:
 	BTree() {
 		this->allocator = 0;
 	}
-	bool Find(T& value, Node& current, int& marker, int offset = 0) {
+	bool Find(T& value, Reference<Node>& nodeptr, int& keyIndex) {
+		nodeptr = root;
+		Node current = root;
+		int& marker = keyIndex;
+		int offset = 0;
 		while(true) {
 			if(BinarySearch(current.keys+offset,current.length-offset,value,marker) !=-1) {
 				value = current.keys[marker+offset];
@@ -327,10 +331,12 @@ public:
 			//Find the appropriate sub-tree and traverse it
 			if(value<current.keys[marker+offset]) {
 				//Take the left sub-tree
-				current = Reference<Node>(allocator->str,current.children[marker+offset]);
+				nodeptr = Reference<Node>(allocator->str,current.children[marker+offset]);
+				current = nodeptr;
 			}else {
 				//Take the right sub-tree
-				current = Reference<Node>(allocator->str,current.children[marker+offset+1]);
+				nodeptr = Reference<Node>(allocator->str,current.children[marker+offset+1]);
+				current = nodeptr;
 			}
 		}
 		marker = marker+offset;
@@ -338,9 +344,9 @@ public:
 	}
 	//Finds the first element matching the specified key
 	bool Find(T& value) {
-		Node current = root;
-		int marker = 0;
-		return Find(value,current,marker);
+		Reference<Node> nodeptr;
+		int keyIndex;
+		return Find(value,nodeptr,keyIndex);
 	}
 	void Insert(T value, Reference<Node> root) {
 		//Find a leaf node
@@ -432,6 +438,17 @@ public:
 
 
 	//Helper functions
+	bool Update(const T& value) {
+		Reference<Node> nodeptr;
+		int keyIndex;
+		if(Find(value,nodeptr,keyIndex)) {
+			Node node = nodeptr;
+			node.keys[keyIndex] = value;
+			nodeptr = node;
+			return true;
+		}
+		return false;
+	}
 	template<typename F>
 	void Traverse(Node root, const F& callback) {
 		for(int i = 0;i<root.length;i++) {
