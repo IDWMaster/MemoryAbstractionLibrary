@@ -441,7 +441,8 @@ public:
 	bool Update(const T& value) {
 		Reference<Node> nodeptr;
 		int keyIndex;
-		if(Find(value,nodeptr,keyIndex)) {
+		T val;
+		if(Find(val,nodeptr,keyIndex)) {
 			Node node = nodeptr;
 			node.keys[keyIndex] = value;
 			nodeptr = node;
