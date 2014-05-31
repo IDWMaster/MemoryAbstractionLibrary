@@ -437,6 +437,68 @@ public:
 	}
 
 
+
+	//EXPERIMENTAL DELETE
+	bool isBalanced(const Node& node, size_t neighborIdx,  size_t& missingIdx) {
+		if(IsLeaf(node)) {
+			return true;
+		}
+		for(size_t i = 0;i<node.length;i++) {
+			if(node.children[i]) {
+				if(!node.children[i+1]) {
+					missingIdx = i+1;
+					neighborIdx = i;
+					return false;
+				}
+			}
+			if(node.children[i+1]) {
+				if(!node.children[i]) {
+					missingIdx = i;
+					neighborIdx = i+1;
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	bool Delete(const T& value) {
+		Reference<Node> nodeptr;
+		int keyIndex;
+		T val = value;
+		if(Find(val,nodeptr,keyIndex)) {
+			Node node = nodeptr;
+			//If we are a leaf, there is nothing complex that needs to be done here
+			//the element can simply be removed.
+			if(IsLeaf(nodeptr)) {
+				//Remove element from node
+				node.length--;
+				memmove(node.keys+keyIndex,node.keys+keyIndex+1,(node.length-keyIndex)*sizeof(T));
+			}else {
+				//Removing the element is a bit more complicated
+				//Sub-trees will need to be adjusted
+				//TODO: Implement
+				throw "up";
+			}
+			if(node.length<KeyCount/2) {
+				//We don't have enough keys.
+				//TODO: Implement
+				throw "up";
+			}
+
+
+			//Write changes to disk
+			nodeptr = node;
+			return true;
+		}
+		return false;
+	}
+	//END EXPERIMENTAL DELETE
+
+
+
+
+
 	//Helper functions
 	bool Update(const T& value) {
 		Reference<Node> nodeptr;
