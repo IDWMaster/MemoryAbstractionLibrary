@@ -258,6 +258,8 @@ static void BinaryInsert(T* A, int32_t& len, const T& key) {
 	}else {
 		//Insert to right of location (this is ALWAYS called at end of list, so memmove is not necessary)
 		location++;
+		//Move everything at location to the right
+		memmove(A+location+1,A+location,(len-location)*sizeof(T));
 		A[location] = key;
 	}
 	len++;
@@ -480,7 +482,7 @@ public:
 				//TODO: Implement
 				throw "up";
 			}
-			if(node.length<KeyCount/2) {
+			if(node.length == 0) {
 				//We don't have enough keys.
 				//TODO: Implement
 				throw "up";
