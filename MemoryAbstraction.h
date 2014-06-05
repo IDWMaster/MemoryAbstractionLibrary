@@ -426,8 +426,8 @@ public:
 		left.length = medianIdx;
 		right.length = medianIdx;
 		//Perform copy
-		memcpy(left.keys,node.keys,medianIdx*sizeof(T));
-		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(T));
+		memcpy(left.keys,node.keys,medianIdx*sizeof(*left.keys));
+		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(*right.keys));
 		left.parent = node.parent;
 		right.parent = node.parent;
 		//Insert the left and right trees into the parent node

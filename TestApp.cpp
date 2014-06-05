@@ -86,6 +86,7 @@ int main(int argc, char** argv)  {
 	searchvalue = std::string("f");
 	tree.Insert(searchvalue);
 	searchvalue = std::string("g");
+	tree.Insert(searchvalue);
 	printfunc();
 
 	return 0;
