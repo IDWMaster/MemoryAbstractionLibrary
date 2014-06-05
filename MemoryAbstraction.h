@@ -241,7 +241,7 @@ static size_t BinarySearch(const T* A,size_t arrlen, const T& key, int& insertio
 	return -1;
 }
 template<typename T>
-static size_t BinaryInsert(T* A, int32_t& len, const T& key) {
+static void BinaryInsert(T* A, int32_t& len, const T& key) {
 	if(len == 0) {
 		A[0] = key;
 		len++;
@@ -263,7 +263,6 @@ static size_t BinaryInsert(T* A, int32_t& len, const T& key) {
 		A[location] = key;
 	}
 	len++;
-	return location;
 }
 
 
@@ -272,14 +271,25 @@ template<typename T, uint64_t KeyCount = 1024>
 class BTree {
 public:
 	class Key {
+	public:
 		T val;
 		uint64_t left;
 		uint64_t right;
 		bool operator<(const Key& other) const {
 			return val<other.val;
 		}
+		bool operator<(const T& other) const {
+			return val<other;
+		}
+		bool operator==(const T& other) const {
+			return val == other;
+		}
 		bool operator==(const Key& other) const {
 			return val == other.val;
+		}
+		operator T&() {
+			//TODO: Warning -- potentially unsafe
+			return val;
 		}
 		Key() {
 			left = 0;
@@ -297,21 +307,18 @@ public:
 			int length;
 			//Keys within this node (plus one auxillary node used for the sole
 			//purpose of splitting)
-			T keys[KeyCount+1];
-			//The child nodes (subtrees)
-			uint64_t children[KeyCount+1];
+			Key keys[KeyCount+1];
 			uint64_t parent;
 			Node() {
 				parent = 0;
 				memset(keys,0,sizeof(keys));
-				memset(children,0,sizeof(children));
 				length = 0;
 			}
 		};
 	//Node is a leaf if it has no children
 		bool IsLeaf(const Node& val) {
 			for(size_t i = 0;i<KeyCount+1;i++) {
-				if(val.children[i]) {
+				if(val.keys[i].left || val.keys[i].right) {
 					return false;
 				}
 			}
@@ -341,7 +348,8 @@ public:
 		int& marker = keyIndex;
 		int offset = 0;
 		while(true) {
-			if(BinarySearch(current.keys+offset,current.length-offset,value,marker) !=-1) {
+			Key mkey = value;
+			if(BinarySearch(current.keys+offset,current.length-offset,mkey,marker) !=-1) {
 				value = current.keys[marker+offset];
 				marker = marker+offset;
 				return true;
@@ -354,11 +362,11 @@ public:
 			//Find the appropriate sub-tree and traverse it
 			if(value<current.keys[marker+offset]) {
 				//Take the left sub-tree
-				nodeptr = Reference<Node>(allocator->str,current.children[marker+offset]);
+				nodeptr = Reference<Node>(allocator->str,current.keys[marker+offset].left);
 				current = nodeptr;
 			}else {
 				//Take the right sub-tree
-				nodeptr = Reference<Node>(allocator->str,current.children[marker+offset+1]);
+				nodeptr = Reference<Node>(allocator->str,current.keys[marker+offset].right);
 				current = nodeptr;
 			}
 		}
@@ -381,21 +389,23 @@ public:
 			//Scan for the insertion point
 			Node node = current;
 			int marker;
-			BinarySearch(node.keys,node.length,value,marker);
+			Key mkey = value;
+			BinarySearch(node.keys,node.length,mkey,marker);
+			value = mkey;
 			if(value<node.keys[marker]) {
 				//Proceed along the left sub-tree
-				current = Reference<Node>(allocator->str,node.children[marker]);
-
+				current = Reference<Node>(allocator->str,node.keys[marker].left);
 			}else {
 				//Proceed along the right sub-tree
-				current = Reference<Node>(allocator->str,node.children[marker+1]);
+				current = Reference<Node>(allocator->str,node.keys[marker].right);
 			}
 		}
 		Node node = current;
 		//We've found a leaf!
 		if(node.length<KeyCount) {
 			//We can just do the insertion
-			size_t ipos = BinaryInsert(node.keys,node.length,value);
+			Key mkey = value;
+			BinaryInsert(node.keys,node.length,mkey);
 			//Update the file
 			current = node;
 			return;
@@ -404,7 +414,8 @@ public:
 		allocator->Free(current);
 
 		//The node is full. Insert the new value and then split this node
-		BinaryInsert(node.keys,node.length,value);
+		Key mkey = value;
+		BinaryInsert(node.keys,node.length,mkey);
 		int medianIdx = node.length/2;
 		T medianValue = node.keys[medianIdx];
 		//Values less than median go in left, greater than go in right node (new nodes allocated)
@@ -428,9 +439,9 @@ public:
 			left.parent = newRoot.offset;
 			right.parent = newRoot.offset;
 			node.parent = newRoot.offset;
-			nroot.children[0] = leftPtr.offset;
-			nroot.children[1] = rightPtr.offset;
 			nroot.keys[0] = medianValue;
+			nroot.keys[0].left = leftPtr.offset;
+			nroot.keys[0].right = rightPtr.offset;
 			nroot.length = 1;
 			//Update root
 			newRoot = nroot;
@@ -459,18 +470,18 @@ public:
 			BinarySearch(parent.keys,parent.length,left.keys[0],marker);
 			if(left.keys[0]<parent.keys[marker]) {
 				//Insert to left of key
-				parent.children[marker] = leftPtr.offset;
+				parent.keys[marker].left = leftPtr.offset;
 			}else {
 				//Insert to right of key
-				parent.children[marker+1] = leftPtr.offset;
+				parent.keys[marker].right = leftPtr.offset;
 			}
 			BinarySearch(parent.keys,parent.length,right.keys[0],marker);
 			if (right.keys[0] < parent.keys[marker]) {
 				//Insert to left of key
-				parent.children[marker] = rightPtr.offset;
+				parent.keys[marker].left = rightPtr.offset;
 			} else {
 				//Insert to right of key
-				parent.children[marker + 1] = rightPtr.offset;
+				parent.keys[marker].right = rightPtr.offset;
 			}
 			//Update nodes
 			parentPtr = parent;
@@ -485,28 +496,7 @@ public:
 
 
 	//EXPERIMENTAL DELETE
-	bool isBalanced(const Node& node, size_t neighborIdx,  size_t& missingIdx) {
-		if(IsLeaf(node)) {
-			return true;
-		}
-		for(size_t i = 0;i<node.length;i++) {
-			if(node.children[i]) {
-				if(!node.children[i+1]) {
-					missingIdx = i+1;
-					neighborIdx = i;
-					return false;
-				}
-			}
-			if(node.children[i+1]) {
-				if(!node.children[i]) {
-					missingIdx = i;
-					neighborIdx = i+1;
-					return false;
-				}
-			}
-		}
-		return true;
-	}
+
 
 	bool Delete(const T& value) {
 		Reference<Node> nodeptr;
@@ -562,14 +552,14 @@ public:
 	void Traverse(Node root, const F& callback) {
 		for(int i = 0;i<root.length;i++) {
 			//Traverse left sub-tree if exists
-			if(root.children[i]) {
-				Traverse(Reference<Node>(allocator->str,root.children[i]),callback);
+			if(root.keys[i].left) {
+				Traverse(Reference<Node>(allocator->str,root.keys[i].left),callback);
 			}
 			//Callback
-			callback(root.keys[i]);
+			callback(root.keys[i].val);
 			//Traverse right sub-tree if exists
-			if(root.children[i+1]) {
-				Traverse(Reference<Node>(allocator->str,root.children[i+1]),callback);
+			if(root.keys[i].right) {
+				Traverse(Reference<Node>(allocator->str,root.keys[i].right),callback);
 			}
 		}
 
