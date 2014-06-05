@@ -453,8 +453,11 @@ public:
 			this->root = newRoot;
 			left.parent = newRoot.offset;
 			right.parent = newRoot.offset;
-			node.parent = newRoot.offset;
 			nroot.keys[0] = medianValue;
+			if(nroot.keys[0].left) {
+				//TODO: If we ALREADY have a kid; what happens to it?
+				throw "up";
+			}
 			nroot.keys[0].left = leftPtr.offset;
 			nroot.keys[0].right = rightPtr.offset;
 			nroot.length = 1;
@@ -468,8 +471,7 @@ public:
 		}
 			Reference<Node> parentPtr = Reference<Node>(allocator->str,left.parent);
 			Node parent = parentPtr;
-			//Insert the median into the parent (which may cause it to split as well, TODO causing memory)
-			//addresses of parent to be possibly invalidated.
+			//Insert the median into the parent (which may cause it to split as well)
 			if(medianValue == value) {
 				throw "up";
 			}
