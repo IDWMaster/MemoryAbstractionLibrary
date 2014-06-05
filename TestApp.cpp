@@ -42,18 +42,19 @@ public:
 
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)  {
 	//EVEN newer program: TODO: Not written yet -- happens in future event
 	//Newer program
 	struct stat ms;
 		memset(mander,0,sizeof(mander));
+		system("rm test");
 		if(stat("test",&ms)) {
 			FILE* mptr = fopen("test","wb");
 			fwrite(mander,1,sizeof(mander),mptr);
 			fclose(mptr);
 		}
 		int fd = open("test",O_RDWR);
-		MemoryMappedFileStream mstr(fd,ms.st_size);
+		MemoryMappedFileStream mstr(fd,sizeof(mander));
 		uint64_t rootptr;
 		MemoryAllocator m(&mstr,rootptr,sizeof(mander));
 
@@ -64,26 +65,29 @@ int main(int argc, char** argv) {
 		mref = Reference<BTree<FileEntry,2>::Node>(&mstr,rootptr);
 	}
 	BTree<FileEntry,2> tree(&m,mref);
-
+	auto printfunc = [&]() {
+	  std::cout<<"Printing\n";
+	  tree.Traverse([&](const FileEntry& entry){
+	    std::cout<<entry.filename<<std::endl;
+	  });
+	};
+	printfunc();
 	FileEntry searchvalue;
-	searchvalue = std::string("d");
+	searchvalue = std::string("a");
 	tree.Insert(searchvalue);
 	searchvalue = std::string("b");
 	tree.Insert(searchvalue);
 	searchvalue = std::string("c");
-	//It's OVER 9000! WOW!
-	searchvalue.metadata = 9001;
 	tree.Insert(searchvalue);
-	searchvalue = std::string("a");
+	searchvalue = std::string("d");
 	tree.Insert(searchvalue);
+	searchvalue = std::string("e");
+	tree.Insert(searchvalue);
+	searchvalue = std::string("f");
+	tree.Insert(searchvalue);
+	searchvalue = std::string("g");
+	printfunc();
 
-	searchvalue = std::string("test");
-	bool rval = tree.Find(searchvalue);
-	searchvalue = std::string("goodbye");
-	rval = tree.Find(searchvalue);
-	tree.Traverse([=](const FileEntry& val){
- 					std::cout<<val.filename<<"\n";
-				});
 	return 0;
 
 	//New program

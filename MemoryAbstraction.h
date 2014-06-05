@@ -241,7 +241,7 @@ static size_t BinarySearch(const T* A,size_t arrlen, const T& key, int& insertio
 	return -1;
 }
 template<typename T>
-static void BinaryInsert(T* A, int32_t& len, const T& key) {
+static size_t BinaryInsert(T* A, int32_t& len, const T& key) {
 	if(len == 0) {
 		A[0] = key;
 		len++;
@@ -263,6 +263,7 @@ static void BinaryInsert(T* A, int32_t& len, const T& key) {
 		A[location] = key;
 	}
 	len++;
+	return location;
 }
 
 
@@ -270,6 +271,26 @@ static void BinaryInsert(T* A, int32_t& len, const T& key) {
 template<typename T, uint64_t KeyCount = 1024>
 class BTree {
 public:
+	class Key {
+		T val;
+		uint64_t left;
+		uint64_t right;
+		bool operator<(const Key& other) const {
+			return val<other.val;
+		}
+		bool operator==(const Key& other) const {
+			return val == other.val;
+		}
+		Key() {
+			left = 0;
+			right = 0;
+		}
+		Key(const T& val) {
+			this->val = val;
+			left = 0;
+			right = 0;
+		}
+	};
 	class Node {
 		public:
 			//The length of the keys array
@@ -350,10 +371,13 @@ public:
 		int keyIndex;
 		return Find(value,nodeptr,keyIndex);
 	}
-	void Insert(T value, Reference<Node> root) {
+	void Insert(T value, Reference<Node> root, bool treatAsLeaf = false) {
 		//Find a leaf node
 		Reference<Node> current = root;
 		while(!IsLeaf(current)) {
+			if(treatAsLeaf) {
+				break;
+			}
 			//Scan for the insertion point
 			Node node = current;
 			int marker;
@@ -371,7 +395,7 @@ public:
 		//We've found a leaf!
 		if(node.length<KeyCount) {
 			//We can just do the insertion
-			BinaryInsert(node.keys,node.length,value);
+			size_t ipos = BinaryInsert(node.keys,node.length,value);
 			//Update the file
 			current = node;
 			return;
@@ -397,16 +421,36 @@ public:
 		right.parent = node.parent;
 		//Insert the left and right trees into the parent node
 		if(node.parent == 0) {
-			//We are at the root, add a new root above our node and add us as a child
+			//We are at the root, add a new root, with the left and right nodes as children.
 			Reference<Node> newRoot = allocator->Allocate<Node>();
+			Node nroot = newRoot;
 			this->root = newRoot;
 			left.parent = newRoot.offset;
 			right.parent = newRoot.offset;
+			node.parent = newRoot.offset;
+			nroot.children[0] = leftPtr.offset;
+			nroot.children[1] = rightPtr.offset;
+			nroot.keys[0] = medianValue;
+			nroot.length = 1;
+			//Update root
+			newRoot = nroot;
+			//Update left
+			leftPtr = left;
+			//Update right
+			rightPtr = right;
+			return;
 		}
 			Reference<Node> parentPtr = Reference<Node>(allocator->str,left.parent);
 			Node parent = parentPtr;
-			//Insert the median into the parent (which may cause it to split as well)
-			Insert(medianValue,parentPtr);
+			//Insert the median into the parent (which may cause it to split as well, TODO causing memory)
+			//addresses of parent to be possibly invalidated.
+			Insert(medianValue,parentPtr,true);
+			//TODO: Is there a more efficient way of doing this rather than a full traversal of the tree?
+			int tkey;
+			bool found = Find(medianValue,parentPtr,tkey);
+			if(!found) {
+				throw "up";
+			}
 			//Refresh the parent
 			parent = parentPtr;
 			//Make left and right sub-trees children of parent
