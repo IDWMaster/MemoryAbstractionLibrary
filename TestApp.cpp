@@ -7,7 +7,7 @@
 
 
 
-
+#include <cmath>
 #include "MemoryAbstraction.h"
 #include <fcntl.h>
 using namespace std;

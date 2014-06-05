@@ -412,7 +412,21 @@ public:
 		}
 		//Full node -- needs split; don't keep on disk anymore
 		allocator->Free(current);
-
+		if(node.parent !=0) {
+			Reference<Node> p_ref = Reference<Node>(allocator->str,node.parent);
+			Node p = p_ref;
+			int marker;
+			BinarySearch(p.keys,p.length,node.keys[0],marker);
+			if(node.keys[0]<p.keys[marker]) {
+				//Remove from left
+				p.keys[marker].left = 0;
+			}else {
+				//Remove from right
+				p.keys[marker].right = 0;
+			}
+			//Save changes to disk
+			p_ref = p;
+		}
 		//The node is full. Insert the new value and then split this node
 		Key mkey = value;
 		BinaryInsert(node.keys,node.length,mkey);
@@ -459,46 +473,15 @@ public:
 			if(medianValue == value) {
 				throw "up";
 			}
-			Insert(medianValue,parentPtr,true);
-			//TODO: Is there a more efficient way of doing this rather than a full traversal of the tree?
-			int tkey;
-			bool found = Find(medianValue,parentPtr,tkey);
-			if(!found) {
-				throw "up";
-			}
-			//Refresh the parent
-			parent = parentPtr;
-			//Make left and right sub-trees children of parent
-			//Compute the insertion marker for the left sub-tree
-			int marker;
-			BinarySearch(parent.keys,parent.length,left.keys[0],marker);
-			if(left.keys[0]<parent.keys[marker]) {
-				//Insert to left of key
-				parent.keys[marker].left = leftPtr.offset;
-			}else {
-				//Insert to right of key
-				parent.keys[marker].right = leftPtr.offset;
-				//Shouldn't ever be hit
-				throw "up";
-			}
-			int oldmarker = marker;
-			BinarySearch(parent.keys,parent.length,right.keys[0],marker);
-			if(oldmarker !=marker) {
-				throw "up";
-			}
-			if (right.keys[0] < parent.keys[marker]) {
-				//Insert to left of key
-				parent.keys[marker].left = rightPtr.offset;
-				//This shouldn't ever actually be hit
-				throw "up";
-			} else {
-				//Insert to right of key
-				parent.keys[marker].right = rightPtr.offset;
-			}
+			medianValue.left = leftPtr.offset;
+			medianValue.right = rightPtr.offset;
+
 			//Update nodes
 			parentPtr = parent;
 			leftPtr = left;
 			rightPtr = right;
+			Insert(medianValue,parentPtr,true);
+			return;
 
 		}
 	void Insert(const T& val) {
