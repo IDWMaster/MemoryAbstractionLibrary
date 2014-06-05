@@ -81,8 +81,11 @@ int main(int argc, char** argv)  {
 	tree.Insert(searchvalue);
 	searchvalue = std::string("d");
 	tree.Insert(searchvalue);
+	printfunc();
+	//TODO: Bug occurs when inserting E
 	searchvalue = std::string("e");
-	tree.Insert(searchvalue);
+ 	tree.Insert(searchvalue);
+	printfunc();
 	searchvalue = std::string("f");
 	tree.Insert(searchvalue);
 	searchvalue = std::string("g");

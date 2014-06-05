@@ -379,7 +379,7 @@ public:
 		int keyIndex;
 		return Find(value,nodeptr,keyIndex);
 	}
-	void Insert(T value, Reference<Node> root, bool treatAsLeaf = false) {
+	void Insert(Key value, Reference<Node> root, bool treatAsLeaf = false) {
 		//Find a leaf node
 		Reference<Node> current = root;
 		while(!IsLeaf(current)) {
@@ -417,7 +417,7 @@ public:
 		Key mkey = value;
 		BinaryInsert(node.keys,node.length,mkey);
 		int medianIdx = node.length/2;
-		T medianValue = node.keys[medianIdx];
+		Key medianValue = node.keys[medianIdx];
 		//Values less than median go in left, greater than go in right node (new nodes allocated)
 		Reference<Node> leftPtr = allocator->Allocate<Node>();
 		Reference<Node> rightPtr = allocator->Allocate<Node>();
@@ -428,6 +428,7 @@ public:
 		//Perform copy
 		memcpy(left.keys,node.keys,medianIdx*sizeof(*left.keys));
 		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(*right.keys));
+
 		left.parent = node.parent;
 		right.parent = node.parent;
 		//Insert the left and right trees into the parent node
@@ -455,6 +456,9 @@ public:
 			Node parent = parentPtr;
 			//Insert the median into the parent (which may cause it to split as well, TODO causing memory)
 			//addresses of parent to be possibly invalidated.
+			if(medianValue == value) {
+				throw "up";
+			}
 			Insert(medianValue,parentPtr,true);
 			//TODO: Is there a more efficient way of doing this rather than a full traversal of the tree?
 			int tkey;
@@ -474,11 +478,19 @@ public:
 			}else {
 				//Insert to right of key
 				parent.keys[marker].right = leftPtr.offset;
+				//Shouldn't ever be hit
+				throw "up";
 			}
+			int oldmarker = marker;
 			BinarySearch(parent.keys,parent.length,right.keys[0],marker);
+			if(oldmarker !=marker) {
+				throw "up";
+			}
 			if (right.keys[0] < parent.keys[marker]) {
 				//Insert to left of key
 				parent.keys[marker].left = rightPtr.offset;
+				//This shouldn't ever actually be hit
+				throw "up";
 			} else {
 				//Insert to right of key
 				parent.keys[marker].right = rightPtr.offset;
