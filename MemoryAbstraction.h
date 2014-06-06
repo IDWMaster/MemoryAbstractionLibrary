@@ -445,6 +445,19 @@ public:
 
 		left.parent = node.parent;
 		right.parent = node.parent;
+		if(medianValue.left) {
+						//Median's left is the same as the rightmost child of the left subtree
+			left.keys[right.length-1].right = medianValue.left;
+			medianValue.left = 0;
+					}
+		if(medianValue.right) {
+			//Median's right is the same as the leftmost child of the right subtree
+			//TODO: Test this
+			right.keys[0].left = medianValue.right;
+			medianValue.right = 0;
+		}
+		medianValue.left = leftPtr.offset;
+		medianValue.right = rightPtr.offset;
 		//Insert the left and right trees into the parent node
 		if(node.parent == 0) {
 			//We are at the root, add a new root, with the left and right nodes as children.
@@ -454,12 +467,6 @@ public:
 			left.parent = newRoot.offset;
 			right.parent = newRoot.offset;
 			nroot.keys[0] = medianValue;
-			if(nroot.keys[0].left) {
-				//TODO: If we ALREADY have a kid; what happens to it?
-				throw "up";
-			}
-			nroot.keys[0].left = leftPtr.offset;
-			nroot.keys[0].right = rightPtr.offset;
 			nroot.length = 1;
 			//Update root
 			newRoot = nroot;
@@ -475,8 +482,6 @@ public:
 			if(medianValue == value) {
 				throw "up";
 			}
-			medianValue.left = leftPtr.offset;
-			medianValue.right = rightPtr.offset;
 
 			//Update nodes
 			parentPtr = parent;
