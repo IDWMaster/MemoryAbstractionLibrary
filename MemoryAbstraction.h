@@ -443,6 +443,34 @@ public:
 		memcpy(left.keys,node.keys,medianIdx*sizeof(*left.keys));
 		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(*right.keys));
 
+		//PATCH
+		//Update parents
+		for(size_t i = 0;i<left.length;i++) {
+			if(left.keys[i].left) {
+				Reference<Node> nptr = Reference<Node>(allocator->str,left.keys[i].left);
+				Node n = nptr;
+				n.parent = leftPtr.offset;
+				nptr = n;
+				nptr = Reference<Node>(allocator->str,left.keys[i].right);
+				n = nptr;
+				n.parent = leftPtr.offset;
+				nptr = n;
+			}
+			if(right.keys[i].left) {
+				Reference<Node> nptr = Reference<Node>(allocator->str,right.keys[i].left);
+				Node n = nptr;
+				n.parent = rightPtr.offset;
+				nptr = n;
+				nptr = Reference<Node>(allocator->str,right.keys[i].right);
+				n = nptr;
+				n.parent = rightPtr.offset;
+				nptr = n;
+			}
+
+		}
+		//END PATCH
+
+
 		left.parent = node.parent;
 		right.parent = node.parent;
 		if(medianValue.left) {
