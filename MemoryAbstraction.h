@@ -215,7 +215,7 @@ public:
 	template<typename T>
 	void Free(const Reference<T>& ptr) {
 		int64_t sz = sizeof(T);
-
+		Free(ptr.offset,sz);
 	}
 };
 
