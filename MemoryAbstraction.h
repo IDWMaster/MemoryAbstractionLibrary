@@ -443,7 +443,6 @@ public:
 		memcpy(left.keys,node.keys,medianIdx*sizeof(*left.keys));
 		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(*right.keys));
 
-		//PATCH
 		//Update parents
 		for(size_t i = 0;i<left.length;i++) {
 			if(left.keys[i].left) {
@@ -468,8 +467,6 @@ public:
 			}
 
 		}
-		//END PATCH
-
 
 		left.parent = node.parent;
 		right.parent = node.parent;
