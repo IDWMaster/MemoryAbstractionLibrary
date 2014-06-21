@@ -379,6 +379,31 @@ public:
 		int keyIndex;
 		return Find(value,nodeptr,keyIndex);
 	}
+	void fixupParents(Node* leftPtr, Node* rightPtr, Node& left, Node& right) {
+		for (size_t i = 0; i<left.length; i++) {
+			if (left.keys[i].left) {
+				Reference<Node> nptr = Reference<Node>(allocator->str, left.keys[i].left);
+				Node n = nptr;
+				n.parent = leftPtr.offset;
+				nptr = n;
+				nptr = Reference<Node>(allocator->str, left.keys[i].right);
+				n = nptr;
+				n.parent = leftPtr.offset;
+				nptr = n;
+			}
+			if (right.keys[i].left) {
+				Reference<Node> nptr = Reference<Node>(allocator->str, right.keys[i].left);
+				Node n = nptr;
+				n.parent = rightPtr.offset;
+				nptr = n;
+				nptr = Reference<Node>(allocator->str, right.keys[i].right);
+				n = nptr;
+				n.parent = rightPtr.offset;
+				nptr = n;
+			}
+
+		}
+	}
 	void Insert(Key value, Reference<Node> root, bool treatAsLeaf = false) {
 		//Find a leaf node
 		Reference<Node> current = root;
@@ -444,29 +469,7 @@ public:
 		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(*right.keys));
 
 		//Update parents
-		for(size_t i = 0;i<left.length;i++) {
-			if(left.keys[i].left) {
-				Reference<Node> nptr = Reference<Node>(allocator->str,left.keys[i].left);
-				Node n = nptr;
-				n.parent = leftPtr.offset;
-				nptr = n;
-				nptr = Reference<Node>(allocator->str,left.keys[i].right);
-				n = nptr;
-				n.parent = leftPtr.offset;
-				nptr = n;
-			}
-			if(right.keys[i].left) {
-				Reference<Node> nptr = Reference<Node>(allocator->str,right.keys[i].left);
-				Node n = nptr;
-				n.parent = rightPtr.offset;
-				nptr = n;
-				nptr = Reference<Node>(allocator->str,right.keys[i].right);
-				n = nptr;
-				n.parent = rightPtr.offset;
-				nptr = n;
-			}
-
-		}
+		fixupParents(leftPtr, rightPtr, left, right);
 
 		left.parent = node.parent;
 		right.parent = node.parent;
@@ -533,15 +536,17 @@ public:
 			Node node = nodeptr;
 			//If we are a leaf, there is nothing complex that needs to be done here
 			//the element can simply be removed.
-			if(IsLeaf(nodeptr)) {
+			Key key = node.keys[keyIndex];
+			if(key.left) {
+				//If we have children we must give them to their parent, then run a fixup
+
+				throw "up";
+			}
+			else {
 				//Remove element from node
 				node.length--;
-				memmove(node.keys+keyIndex,node.keys+keyIndex+1,(node.length-keyIndex)*sizeof(T));
-			}else {
-				//Removing the element is a bit more complicated
-				//Sub-trees will need to be adjusted
-				//TODO: Implement
-				throw "up";
+				memmove(node.keys + keyIndex, node.keys + keyIndex + 1, (node.length - keyIndex)*sizeof(*node.keys));
+
 			}
 			if(node.length == 0) {
 				//We don't have enough keys.
