@@ -379,7 +379,7 @@ public:
 		int keyIndex;
 		return Find(value,nodeptr,keyIndex);
 	}
-	void fixupParents(Node* leftPtr, Node* rightPtr, Node& left, Node& right) {
+	void fixupParents(Reference<Node> leftPtr, Reference<Node> rightPtr, Node& left, Node& right) {
 		for (size_t i = 0; i<left.length; i++) {
 			if (left.keys[i].left) {
 				Reference<Node> nptr = Reference<Node>(allocator->str, left.keys[i].left);
