@@ -59,13 +59,19 @@ public:
 		str->Read(offset,retval);
 		return retval;
 	}
+	const T val() {
+		return (T)(*this);
+	}
 	Reference& operator=(const T& other) {
 		str->Write(offset,other);
 		return *this;
 	}
-
+	operator bool() {
+		return offset;
+	}
 	Reference() {
-
+str = 0;
+offset = 0;
 	}
 
 };
@@ -522,41 +528,200 @@ public:
 	void Insert(const T& val) {
 		Insert(val,root);
 	}
+	Reference<Node> D(uint64_t offset) {
+		return Reference<Node>(allocator->str,offset);
+	}
+
+	uint64_t& getLeft(Node& node, size_t keyIndex) {
+		if(node.keys[keyIndex].left) {
+			return node.keys[keyIndex].left;
+		}
+		if(keyIndex == 0) {
+			return node.keys[keyIndex].left;
+		}
+		return node.keys[keyIndex-1].right;
 
 
 
+	}
+	uint64_t& getRight(Node& node, size_t keyIndex) {
+		if(node.keys[keyIndex].right || keyIndex == 0) {
+			return node.keys[keyIndex].right;
+		}
+		return node.keys[keyIndex+1].left;
+	}
+	uint64_t FindSibling(Reference<Node> nodePtr, bool& isLeft) {
+		Node node = nodePtr;
+		Reference<Node> parentPtr = D(node.parent);
+		Node parent = parentPtr;
+		Key key = node.keys[0];
+		int marker = 0;
+		BinarySearch(parent.keys,parent.length,key,marker);
+		if(getLeft(parent,marker) == nodePtr.offset) {
+			//We are in left sub-tree
+			return getRight(parent,marker);
+		}else {
+			//We are in right sub-tree
+			return getLeft(parent,marker);
+		}
+	}
+	int FindInParent(const Node& searchValue, const Node& parent) {
+		int marker = 0;
+		Key key = searchValue.keys[0];
+		BinarySearch(parent.keys,parent.length,key,marker);
+		return marker;
+	}
+	void fixupParents(Reference<Node> nodeptr) {
+		Node node = nodeptr;
+		for(size_t i = 0;i<node.length;i++) {
+			if(getLeft(node,i)) {
+				Reference<Node> m = D(getLeft(node,i));
+				Node a = m;
+				if(a.parent !=nodeptr) {
+					a.parent = nodeptr;
+					m = a;
+				}
+				m = D(getRight(node,i));
+				a = m;
+				if(a.parent !=nodeptr) {
+					a.parent = nodeptr;
+					m = a;
+				}
+			}
+
+		}
+	}
+	void Rebalance(Reference<Node> nodePtr) {
+		Node node = nodePtr;
+		bool isLeft;
+		Reference<Node> siblingPtr = D(FindSibling(nodePtr,isLeft));
+		Node sibling = siblingPtr;
+		Reference<Node> parentPtr = D(node.parent);
+		Node parent = parentPtr;
+		int parentmarker = FindInParent(node,parent);
+		if(sibling.length>KeyCount/2) {
+			//we have a sibling with enough nodes!
+			if(isLeft) {
+				//Rotate left
+				node.keys[node.length-1].val = parent.keys[parentmarker];
+				parent.keys[parentmarker].val = sibling.keys[0];
+				memmove(sibling.keys,sibling.keys+1,sibling.length*sizeof(sibling.keys[0]));
+				sibling.length--;
+				node.length++;
+			}else {
+				//Rotate right
+				memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
+				node.keys[0].val = parent.keys[parentmarker];
+				parent.keys[parentmarker].val = sibling.keys[sibling.length-1];
+				sibling.length--;
+				node.length++;
+			}
+			nodePtr = node;
+			siblingPtr = sibling;
+			parentPtr = parent;
+		}else {
+			//No sibling can spare a node
+
+				//Merge with a sibling
+				//Copy the separator to the end of this node
+				node.keys[node.length].val = parent.keys[parentmarker];
+				node.length++;
+				//Copy everything in our sibling node to this node, and free the sibling node
+				if(isLeft) {
+				memcpy(node.keys+node.length,sibling.keys,sibling.length*sizeof(sibling.keys[0]));
+				}else {
+					//Move everything over to the right to make room for the left kids
+					memmove(node.keys+sibling.length,node.keys,sibling.length*sizeof(sibling.keys[0]));
+					//Insert the children
+					memcpy(node.keys,sibling.keys,sibling.length*sizeof(sibling.keys[0]));
+					node.length+=sibling.length;
+				}
+				allocator->Free(siblingPtr);
+				if(isLeft) {
+				getRight(parent,parentmarker) = 0;
+				}else {
+					getLeft(parent,parentmarker) = 0;
+				}
+				//Fixup parents
+				nodePtr = node;
+				fixupParents(nodePtr);
+				//Remove the separator from the parent
+				memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,parent.length*sizeof(parent.keys[0]));
+				//TODO: Ugly kludge. Can we depend on this always working?
+				if(isLeft) {
+				getLeft(parent,parentmarker) = nodePtr;
+				}else {
+					getRight(parent,parentmarker) = nodePtr;
+				}
+				parent.length--;
+				//Move the node over to the neighboring element
+				if(parent.length == 0 && parent.parent == 0) {
+					//We're root.
+					//Make ourselves that after freeing parent
+					allocator->Free(parentPtr);
+					this->root = nodePtr;
+					node.parent = 0;
+					nodePtr = node;
+					return;
+				}else {
+					if(parent.length<KeyCount/2) {
+						//We are below the required number of keys; need to re-balance the parent
+						parentPtr = parent;
+						nodePtr = node;
+						Rebalance(parentPtr);
+
+					}
+				}
+
+		}
+	}
 	//EXPERIMENTAL DELETE
+	void Remove(Reference<Node> nodeptr, size_t keyIndex) {
+		Node node = nodeptr;
+					//If we are a leaf, there is nothing complex that needs to be done here
+					//the element can simply be removed.
+					Key key = node.keys[keyIndex];
+					if(getLeft(node,keyIndex)) {
+						//If we have children we must give them to their parent, then run a fixup
+						//Exchange the separator with the greatest value in the leftmost subtree
+						Reference<Node> leftPtr = D(getLeft(node,keyIndex));
+						Node left = leftPtr;
+						Key separator = left.keys[left.length-1];
+						left.keys[left.length-1].val = node.keys[keyIndex];
+						node.keys[keyIndex].val = separator;
+						//Update on-disk layout
+						nodeptr = node;
+						leftPtr = left;
+						//Now; delete the value from the left sub-tree
 
+						Remove(leftPtr,left.length-1);
+						//Refresh nodes
+						left = leftPtr;
+						node = nodeptr;
 
+					}
+					else {
+						//Remove element from node
+						node.length--;
+						memmove(node.keys + keyIndex, node.keys + keyIndex + 1, (node.length - keyIndex)*sizeof(*node.keys));
+						nodeptr = node;
+
+					}
+					if(node.length < KeyCount/2) {
+						//We don't have enough keys.
+						//TODO: Implement
+						printf("Rebalancing\n");
+						Rebalance(nodeptr);
+						printf("Rebalanced\n");
+						//throw "up";
+					}
+	}
 	bool Delete(const T& value) {
 		Reference<Node> nodeptr;
 		int keyIndex;
 		T val = value;
 		if(Find(val,nodeptr,keyIndex)) {
-			Node node = nodeptr;
-			//If we are a leaf, there is nothing complex that needs to be done here
-			//the element can simply be removed.
-			Key key = node.keys[keyIndex];
-			if(key.left) {
-				//If we have children we must give them to their parent, then run a fixup
-
-				throw "up";
-			}
-			else {
-				//Remove element from node
-				node.length--;
-				memmove(node.keys + keyIndex, node.keys + keyIndex + 1, (node.length - keyIndex)*sizeof(*node.keys));
-
-			}
-			if(node.length == 0) {
-				//We don't have enough keys.
-				//TODO: Implement
-				throw "up";
-			}
-
-
-			//Write changes to disk
-			nodeptr = node;
+			Remove(nodeptr,keyIndex);
 			return true;
 		}
 		return false;

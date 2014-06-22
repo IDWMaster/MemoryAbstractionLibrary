@@ -5,6 +5,7 @@ SOURCES=TestApp.cpp
 OBJECTS=$(SOURCES:.cpp=.o) $(LEGACYSOURCES:.c=.o)
 EXECUTABLE=TestApplication
 G++=g++
+TestApp.cpp: MemoryAbstraction.h
 all: $(SOURCES) $(EXECUTABLE)
 $(EXECUTABLE): $(OBJECTS)
 	g++ --std=c++0x -g $(OBJECTS) $(LDFLAGS) -Wl,-rpath . -o $@

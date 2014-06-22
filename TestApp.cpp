@@ -89,8 +89,8 @@ int main(int argc, char** argv)  {
 	printfunc();
 	searchvalue = std::string("g");
 	tree.Insert(searchvalue);
-	//TODO: Bug NOW occurs when inserting G (the C is deleted when the left node is replaced in the median value)
-
+	searchvalue = std::string("f");
+	tree.Delete(searchvalue);
 	printfunc();
 
 	return 0;
