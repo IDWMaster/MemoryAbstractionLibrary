@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <string.h>
 #include <math.h>
+#include <vector>
 namespace MemoryAbstraction {
 class Stream {
 public:
@@ -368,11 +369,13 @@ public:
 			//Find the appropriate sub-tree and traverse it
 			if(value<current.keys[marker+offset]) {
 				//Take the left sub-tree
-				nodeptr = Reference<Node>(allocator->str,current.keys[marker+offset].left);
+				//nodeptr = Reference<Node>(allocator->str,current.keys[marker+offset].left);
+				nodeptr = D(getLeft(current,marker+offset));
 				current = nodeptr;
 			}else {
 				//Take the right sub-tree
-				nodeptr = Reference<Node>(allocator->str,current.keys[marker+offset].right);
+				//nodeptr = Reference<Node>(allocator->str,current.keys[marker+offset].right);
+				nodeptr = D(getRight(current,marker+offset));
 				current = nodeptr;
 			}
 		}
@@ -559,9 +562,15 @@ public:
 		BinarySearch(parent.keys,parent.length,key,marker);
 		if(getLeft(parent,marker) == nodePtr.offset) {
 			//We are in left sub-tree
+			isLeft = true;
 			return getRight(parent,marker);
 		}else {
+			if(getRight(parent,marker) != nodePtr.offset) {
+				printf("Scan problem\n");
+				throw "up";
+			}
 			//We are in right sub-tree
+			isLeft = false;
 			return getLeft(parent,marker);
 		}
 	}
@@ -595,12 +604,20 @@ public:
 		Node node = nodePtr;
 		bool isLeft;
 		Reference<Node> siblingPtr = D(FindSibling(nodePtr,isLeft));
+		if(siblingPtr.offset == 0) {
+			printf("Hit root.\n");
+			throw "up";
+		}
 		Node sibling = siblingPtr;
 		Reference<Node> parentPtr = D(node.parent);
 		Node parent = parentPtr;
 		int parentmarker = FindInParent(node,parent);
+		if((getLeft(parent,parentmarker) != nodePtr.offset) && (getRight(parent,parentmarker) != nodePtr.offset)) {
+			throw "up";
+		}
 		if(sibling.length>KeyCount/2) {
 			//we have a sibling with enough nodes!
+			printf("Kids happen\n");
 			if(isLeft) {
 				//Rotate left
 				node.keys[node.length-1].val = parent.keys[parentmarker];
@@ -624,14 +641,25 @@ public:
 
 				//Merge with a sibling
 				//Copy the separator to the end of this node
+			if(isLeft) {
 				node.keys[node.length].val = parent.keys[parentmarker];
+			}else {
+				memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
+				node.keys[0].val = parent.keys[parentmarker];
+
+			}
 				node.length++;
 				//Copy everything in our sibling node to this node, and free the sibling node
 				if(isLeft) {
 				memcpy(node.keys+node.length,sibling.keys,sibling.length*sizeof(sibling.keys[0]));
+				if(sibling.length == 0) {
+					printf("HUHHH???\n");
+					throw "up";
+				}
+				node.length+=sibling.length;
 				}else {
 					//Move everything over to the right to make room for the left kids
-					memmove(node.keys+sibling.length,node.keys,sibling.length*sizeof(sibling.keys[0]));
+					memmove(node.keys+sibling.length,node.keys,node.length*sizeof(sibling.keys[0]));
 					//Insert the children
 					memcpy(node.keys,sibling.keys,sibling.length*sizeof(sibling.keys[0]));
 					node.length+=sibling.length;
@@ -646,29 +674,39 @@ public:
 				nodePtr = node;
 				fixupParents(nodePtr);
 				//Remove the separator from the parent
-				memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,parent.length*sizeof(parent.keys[0]));
-				//TODO: Ugly kludge. Can we depend on this always working?
-				if(isLeft) {
-				getLeft(parent,parentmarker) = nodePtr;
-				}else {
-					getRight(parent,parentmarker) = nodePtr;
-				}
+				memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,(parent.length-parentmarker)*sizeof(parent.keys[0]));
 				parent.length--;
+				parentPtr = parent;
 				//Move the node over to the neighboring element
 				if(parent.length == 0 && parent.parent == 0) {
 					//We're root.
 					//Make ourselves that after freeing parent
+					printf("Have you got root? Because I sure do!\n");
 					allocator->Free(parentPtr);
 					this->root = nodePtr;
 					node.parent = 0;
 					nodePtr = node;
 					return;
 				}else {
+
 					if(parent.length<KeyCount/2) {
 						//We are below the required number of keys; need to re-balance the parent
 						parentPtr = parent;
 						nodePtr = node;
+						printf("Parent needs rebalancing\n");
 						Rebalance(parentPtr);
+						parent = parentPtr;
+						if(parent.length<KeyCount/2) {
+							printf("Still parent problems\n");
+						}
+						//Insert ourselves into our parent again
+						parentmarker = FindInParent(node,parent);
+						if(node.keys[0].val<parent.keys[parentmarker].val) {
+							getLeft(parent,parentmarker) = nodePtr.offset;
+						}else {
+							getRight(parent,parentmarker) = nodePtr.offset;
+						}
+						parentPtr = parent;
 
 					}
 				}
@@ -676,7 +714,7 @@ public:
 		}
 	}
 	//EXPERIMENTAL DELETE
-	void Remove(Reference<Node> nodeptr, size_t keyIndex) {
+	void Remove(Reference<Node> nodeptr, size_t keyIndex, std::vector<uint64_t>& rebalancerefs) {
 		Node node = nodeptr;
 					//If we are a leaf, there is nothing complex that needs to be done here
 					//the element can simply be removed.
@@ -694,7 +732,7 @@ public:
 						leftPtr = left;
 						//Now; delete the value from the left sub-tree
 
-						Remove(leftPtr,left.length-1);
+						Remove(leftPtr,left.length-1,rebalancerefs);
 						//Refresh nodes
 						left = leftPtr;
 						node = nodeptr;
@@ -708,11 +746,8 @@ public:
 
 					}
 					if(node.length < KeyCount/2) {
-						//We don't have enough keys.
-						//TODO: Implement
-						printf("Rebalancing\n");
+						//rebalancerefs.push_back(nodeptr.offset);
 						Rebalance(nodeptr);
-						printf("Rebalanced\n");
 						//throw "up";
 					}
 	}
@@ -721,7 +756,13 @@ public:
 		int keyIndex;
 		T val = value;
 		if(Find(val,nodeptr,keyIndex)) {
-			Remove(nodeptr,keyIndex);
+			std::vector<uint64_t> toRebalance;
+			Remove(nodeptr,keyIndex,toRebalance);
+			for(size_t i = 0;i<toRebalance.size();i++) {
+				printf("Rebalancing\n");
+				Rebalance(D(toRebalance[i]));
+				printf("Rebalanced\n");
+			}
 			return true;
 		}
 		return false;
@@ -749,14 +790,14 @@ public:
 	void Traverse(Node root, const F& callback) {
 		for(int i = 0;i<root.length;i++) {
 			//Traverse left sub-tree if exists
-			if(root.keys[i].left) {
-				Traverse(Reference<Node>(allocator->str,root.keys[i].left),callback);
+			if(getLeft(root,i)) {
+				Traverse(D(getLeft(root,i)),callback);
 			}
 			//Callback
 			callback(root.keys[i].val);
 			//Traverse right sub-tree if exists
-			if(root.keys[i].right) {
-				Traverse(Reference<Node>(allocator->str,root.keys[i].right),callback);
+			if(getRight(root,i)) {
+				Traverse(D(getRight(root,i)),callback);
 			}
 		}
 
