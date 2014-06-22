@@ -580,20 +580,19 @@ public:
 		BinarySearch(parent.keys,parent.length,key,marker);
 		return marker;
 	}
-	void fixupParents(Reference<Node> nodeptr) {
-		Node node = nodeptr;
+	void fixupParents(Reference<Node> nodeptr, Node& node) {
 		for(size_t i = 0;i<node.length;i++) {
 			if(getLeft(node,i)) {
 				Reference<Node> m = D(getLeft(node,i));
 				Node a = m;
-				if(a.parent !=nodeptr) {
-					a.parent = nodeptr;
+				if(a.parent !=nodeptr.offset) {
+					a.parent = nodeptr.offset;
 					m = a;
 				}
 				m = D(getRight(node,i));
 				a = m;
-				if(a.parent !=nodeptr) {
-					a.parent = nodeptr;
+				if(a.parent !=nodeptr.offset) {
+					a.parent = nodeptr.offset;
 					m = a;
 				}
 			}
@@ -672,7 +671,7 @@ public:
 				}
 				//Fixup parents
 				nodePtr = node;
-				fixupParents(nodePtr);
+				fixupParents(nodePtr,node);
 				//Remove the separator from the parent
 				memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,(parent.length-parentmarker)*sizeof(parent.keys[0]));
 				parent.length--;
@@ -787,17 +786,26 @@ public:
 		return false;
 	}
 	template<typename F>
-	void Traverse(Node root, const F& callback) {
+	void Traverse(Reference<Node> rootPtr, const F& callback) {
+		Node root = rootPtr;
 		for(int i = 0;i<root.length;i++) {
 			//Traverse left sub-tree if exists
 			if(getLeft(root,i)) {
+				if(D(getLeft(root,i)).val().parent != rootPtr.offset) {
+					throw "down";
+				}
 				Traverse(D(getLeft(root,i)),callback);
+
 			}
 			//Callback
 			callback(root.keys[i].val);
 			//Traverse right sub-tree if exists
 			if(getRight(root,i)) {
+				if(D(getRight(root,i)).val().parent != rootPtr.offset) {
+					throw "sideways";
+				}
 				Traverse(D(getRight(root,i)),callback);
+
 			}
 		}
 
