@@ -248,11 +248,11 @@ static size_t BinarySearch(const T* A,size_t arrlen, const T& key, int& insertio
 	return -1;
 }
 template<typename T>
-static void BinaryInsert(T* A, int32_t& len, const T& key) {
+static size_t BinaryInsert(T* A, int32_t& len, const T& key) {
 	if(len == 0) {
 		A[0] = key;
 		len++;
-		return;
+		return 0;
 	}
 	int location;
 	BinarySearch(A,len,key,location);
@@ -270,6 +270,7 @@ static void BinaryInsert(T* A, int32_t& len, const T& key) {
 		A[location] = key;
 	}
 	len++;
+	return location;
 }
 
 
@@ -278,54 +279,61 @@ template<typename T, uint64_t KeyCount = 1024>
 class BTree {
 public:
 	class Key {
-	public:
-		T val;
-		uint64_t left;
-		uint64_t right;
-		bool operator<(const Key& other) const {
-			return val<other.val;
-		}
-		bool operator<(const T& other) const {
-			return val<other;
-		}
-		bool operator==(const T& other) const {
-			return val == other;
-		}
-		bool operator==(const Key& other) const {
-			return val == other.val;
-		}
-		operator T&() {
-			//TODO: Warning -- potentially unsafe
-			return val;
-		}
-		Key() {
-			left = 0;
-			right = 0;
-		}
-		Key(const T& val) {
-			this->val = val;
-			left = 0;
-			right = 0;
-		}
-	};
+		public:
+			T val;
+			uint64_t left;
+			uint64_t right;
+			Key() {
+				left = 0;
+				right = 0;
+			}
+			Key(const T& val) {
+				this->val = val;
+				left = 0;
+				right = 0;
+			}
+			Key(const T& val, uint64_t left, uint64_t right) {
+				this->val = val;
+				this->left = left;
+				this->right = right;
+			}
+		};
 	class Node {
 		public:
 			//The length of the keys array
 			int length;
 			//Keys within this node (plus one auxillary node used for the sole
 			//purpose of splitting)
-			Key keys[KeyCount+1];
+			T keys[KeyCount+1];
+			uint64_t children[KeyCount+2];
 			uint64_t parent;
 			Node() {
 				parent = 0;
 				memset(keys,0,sizeof(keys));
+				memset(children,0,sizeof(children));
 				length = 0;
+			}
+			void nodemove(size_t destoffset, size_t srcoffset, size_t len) {
+				//Zero-fill memmove
+				memmove(keys+destoffset,keys+srcoffset,len);
+				memset(keys+srcoffset,0,len*sizeof(keys[0]));
+				memmove(children+destoffset,children+srcoffset,(len+1)*sizeof(children[0]));
+				memset(children+srcoffset,0,(len+1)*sizeof(children[0]));
+				printf("TODO: TEST THIS\n");
+			}
+			size_t Insert(const Key& val) {
+
+				size_t rval = BinaryInsert(keys,length,val.val);
+				memmove(children+rval+1,children+rval,((length-rval))*sizeof(children[0]));
+				children[rval] = val.left;
+				children[rval+1] = val.right;
+				return rval;
 			}
 		};
 	//Node is a leaf if it has no children
 		bool IsLeaf(const Node& val) {
 			for(size_t i = 0;i<KeyCount+1;i++) {
-				if(val.keys[i].left || val.keys[i].right) {
+				if(getLeft(val,i) || getRight(val,i)) {
 					return false;
 				}
 			}
@@ -355,7 +363,7 @@ public:
 		int& marker = keyIndex;
 		int offset = 0;
 		while(true) {
-			Key mkey = value;
+			T mkey = value;
 			if(BinarySearch(current.keys+offset,current.length-offset,mkey,marker) !=-1) {
 				value = current.keys[marker+offset];
 				marker = marker+offset;
@@ -390,28 +398,34 @@ public:
 	}
 	void fixupParents(Reference<Node> leftPtr, Reference<Node> rightPtr, Node& left, Node& right) {
 		for (size_t i = 0; i<left.length; i++) {
-			if (left.keys[i].left) {
-				Reference<Node> nptr = Reference<Node>(allocator->str, left.keys[i].left);
+			if (getLeft(left,i)) {
+				Reference<Node> nptr = D(getLeft(left,i));
 				Node n = nptr;
 				n.parent = leftPtr.offset;
 				nptr = n;
-				nptr = Reference<Node>(allocator->str, left.keys[i].right);
+				nptr = D(getRight(left,i));
 				n = nptr;
 				n.parent = leftPtr.offset;
 				nptr = n;
 			}
-			if (right.keys[i].left) {
-				Reference<Node> nptr = Reference<Node>(allocator->str, right.keys[i].left);
+			if (D(getLeft(right,i))) {
+				//Reference<Node> nptr = Reference<Node>(allocator->str, right.keys[i].left);
+				Reference<Node> nptr = D(getLeft(right,i));
 				Node n = nptr;
 				n.parent = rightPtr.offset;
 				nptr = n;
-				nptr = Reference<Node>(allocator->str, right.keys[i].right);
+				nptr = D(getRight(right,i));
 				n = nptr;
 				n.parent = rightPtr.offset;
 				nptr = n;
 			}
 
 		}
+	}
+	void nodecopy(Node& dest, Node& src, size_t destoffset, size_t srcoffset, size_t len) {
+		memcpy(dest.keys+destoffset,src.keys+srcoffset,len*sizeof(src.keys[0]));
+		memcpy(dest.children+destoffset,src.children+srcoffset,(len+1)*sizeof(src.children[0]));
+
 	}
 	void Insert(Key value, Reference<Node> root, bool treatAsLeaf = false) {
 		//Find a leaf node
@@ -423,23 +437,20 @@ public:
 			//Scan for the insertion point
 			Node node = current;
 			int marker;
-			Key mkey = value;
-			BinarySearch(node.keys,node.length,mkey,marker);
-			value = mkey;
-			if(value<node.keys[marker]) {
+			BinarySearch(node.keys,node.length,value.val,marker);
+			if(value.val<node.keys[marker]) {
 				//Proceed along the left sub-tree
-				current = Reference<Node>(allocator->str,node.keys[marker].left);
+				current = D(getLeft(node,marker));
 			}else {
 				//Proceed along the right sub-tree
-				current = Reference<Node>(allocator->str,node.keys[marker].right);
+				current = D(getRight(node,marker));
 			}
 		}
 		Node node = current;
 		//We've found a leaf!
 		if(node.length<KeyCount) {
 			//We can just do the insertion
-			Key mkey = value;
-			BinaryInsert(node.keys,node.length,mkey);
+			node.Insert(value);
 			//Update the file
 			current = node;
 			return;
@@ -453,17 +464,16 @@ public:
 			BinarySearch(p.keys,p.length,node.keys[0],marker);
 			if(node.keys[0]<p.keys[marker]) {
 				//Remove from left
-				p.keys[marker].left = 0;
+				getLeft(p,marker) = 0;
 			}else {
 				//Remove from right
-				p.keys[marker].right = 0;
+				getRight(p,marker) = 0;
 			}
 			//Save changes to disk
 			p_ref = p;
 		}
 		//The node is full. Insert the new value and then split this node
-		Key mkey = value;
-		BinaryInsert(node.keys,node.length,mkey);
+		node.Insert(value);
 		int medianIdx = node.length/2;
 		Key medianValue = node.keys[medianIdx];
 		//Values less than median go in left, greater than go in right node (new nodes allocated)
@@ -474,25 +484,13 @@ public:
 		left.length = medianIdx;
 		right.length = medianIdx;
 		//Perform copy
-		memcpy(left.keys,node.keys,medianIdx*sizeof(*left.keys));
-		memcpy(right.keys,node.keys+medianIdx+1,medianIdx*sizeof(*right.keys));
-
+		nodecopy(left,node,0,0,medianIdx);
+		nodecopy(right,node,0,medianIdx+1,medianIdx);
 		//Update parents
 		fixupParents(leftPtr, rightPtr, left, right);
 
 		left.parent = node.parent;
 		right.parent = node.parent;
-		if(medianValue.left) {
-						//Median's left is the same as the rightmost child of the left subtree
-			left.keys[right.length-1].right = medianValue.left;
-			medianValue.left = 0;
-					}
-		if(medianValue.right) {
-			//Median's right is the same as the leftmost child of the right subtree
-			//TODO: Test this
-			right.keys[0].left = medianValue.right;
-			medianValue.right = 0;
-		}
 		medianValue.left = leftPtr.offset;
 		medianValue.right = rightPtr.offset;
 		//Insert the left and right trees into the parent node
@@ -503,7 +501,9 @@ public:
 			this->root = newRoot;
 			left.parent = newRoot.offset;
 			right.parent = newRoot.offset;
-			nroot.keys[0] = medianValue;
+			nroot.keys[0] = medianValue.val;
+			nroot.children[0] = medianValue.left;
+			nroot.children[1] = medianValue.right;
 			nroot.length = 1;
 			//Update root
 			newRoot = nroot;
@@ -516,7 +516,7 @@ public:
 			Reference<Node> parentPtr = Reference<Node>(allocator->str,left.parent);
 			Node parent = parentPtr;
 			//Insert the median into the parent (which may cause it to split as well)
-			if(medianValue == value) {
+			if(medianValue.val == value.val) {
 				throw "up";
 			}
 
@@ -534,30 +534,23 @@ public:
 	Reference<Node> D(uint64_t offset) {
 		return Reference<Node>(allocator->str,offset);
 	}
-
+	const uint64_t& getLeft(const Node& node, size_t keyIndex) {
+			return node.children[keyIndex];
+		}
+		const uint64_t& getRight(const Node& node, size_t keyIndex) {
+			return node.children[keyIndex+1];
+		}
 	uint64_t& getLeft(Node& node, size_t keyIndex) {
-		if(node.keys[keyIndex].left) {
-			return node.keys[keyIndex].left;
-		}
-		if(keyIndex == 0) {
-			return node.keys[keyIndex].left;
-		}
-		return node.keys[keyIndex-1].right;
-
-
-
+		return node.children[keyIndex];
 	}
 	uint64_t& getRight(Node& node, size_t keyIndex) {
-		if(node.keys[keyIndex].right || keyIndex == 0) {
-			return node.keys[keyIndex].right;
-		}
-		return node.keys[keyIndex+1].left;
+		return node.children[keyIndex+1];
 	}
 	uint64_t FindSibling(Reference<Node> nodePtr, bool& isLeft) {
 		Node node = nodePtr;
 		Reference<Node> parentPtr = D(node.parent);
 		Node parent = parentPtr;
-		Key key = node.keys[0];
+		T key = node.keys[0];
 		int marker = 0;
 		BinarySearch(parent.keys,parent.length,key,marker);
 		if(getLeft(parent,marker) == nodePtr.offset) {
@@ -576,7 +569,7 @@ public:
 	}
 	int FindInParent(const Node& searchValue, const Node& parent) {
 		int marker = 0;
-		Key key = searchValue.keys[0];
+		T key = searchValue.keys[0];
 		BinarySearch(parent.keys,parent.length,key,marker);
 		return marker;
 	}
@@ -619,16 +612,21 @@ public:
 			printf("Kids happen\n");
 			if(isLeft) {
 				//Rotate left
-				node.keys[node.length-1].val = parent.keys[parentmarker];
-				parent.keys[parentmarker].val = sibling.keys[0];
+				printf("TODO: UPDATE ROTATIONS TO MOVE CHILDREN AROUND AS WELL");
+				throw "down";
+				node.keys[node.length-1] = parent.keys[parentmarker];
+				parent.keys[parentmarker] = sibling.keys[0];
 				memmove(sibling.keys,sibling.keys+1,sibling.length*sizeof(sibling.keys[0]));
 				sibling.length--;
 				node.length++;
 			}else {
 				//Rotate right
+
+				printf("TODO: UPDATE ROTATIONS TO MOVE CHILDREN AROUND AS WELL");
+				throw "down";
 				memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
-				node.keys[0].val = parent.keys[parentmarker];
-				parent.keys[parentmarker].val = sibling.keys[sibling.length-1];
+				node.keys[0] = parent.keys[parentmarker];
+				parent.keys[parentmarker] = sibling.keys[sibling.length-1];
 				sibling.length--;
 				node.length++;
 			}
@@ -641,26 +639,27 @@ public:
 				//Merge with a sibling
 				//Copy the separator to the end of this node
 			if(isLeft) {
-				node.keys[node.length].val = parent.keys[parentmarker];
+				node.keys[node.length] = parent.keys[parentmarker];
 			}else {
-				memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
-				node.keys[0].val = parent.keys[parentmarker];
+				//memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
+				node.nodemove(1,0,node.length);
+				node.keys[0] = parent.keys[parentmarker];
 
 			}
 				node.length++;
 				//Copy everything in our sibling node to this node, and free the sibling node
 				if(isLeft) {
-				memcpy(node.keys+node.length,sibling.keys,sibling.length*sizeof(sibling.keys[0]));
-				if(sibling.length == 0) {
+				nodecopy(node,sibling,node.length,0,sibling.length);
+					if(sibling.length == 0) {
 					printf("HUHHH???\n");
 					throw "up";
 				}
 				node.length+=sibling.length;
 				}else {
 					//Move everything over to the right to make room for the left kids
-					memmove(node.keys+sibling.length,node.keys,node.length*sizeof(sibling.keys[0]));
+					node.nodemove(sibling.length,0,node.length);
 					//Insert the children
-					memcpy(node.keys,sibling.keys,sibling.length*sizeof(sibling.keys[0]));
+					nodecopy(node,sibling,0,0,sibling.length);
 					node.length+=sibling.length;
 				}
 				allocator->Free(siblingPtr);
@@ -673,7 +672,9 @@ public:
 				nodePtr = node;
 				fixupParents(nodePtr,node);
 				//Remove the separator from the parent
-				memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,(parent.length-parentmarker)*sizeof(parent.keys[0]));
+				//memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,(parent.length-parentmarker)*sizeof(parent.keys[0]));
+				printf("TODO: This line is really screwing stuff up\n");
+				parent.nodemove(parentmarker,parentmarker+1,parent.length-parentmarker);
 				parent.length--;
 				parentPtr = parent;
 				//Move the node over to the neighboring element
@@ -700,7 +701,7 @@ public:
 						}
 						//Insert ourselves into our parent again
 						parentmarker = FindInParent(node,parent);
-						if(node.keys[0].val<parent.keys[parentmarker].val) {
+						if(node.keys[0]<parent.keys[parentmarker]) {
 							getLeft(parent,parentmarker) = nodePtr.offset;
 						}else {
 							getRight(parent,parentmarker) = nodePtr.offset;
@@ -717,15 +718,14 @@ public:
 		Node node = nodeptr;
 					//If we are a leaf, there is nothing complex that needs to be done here
 					//the element can simply be removed.
-					Key key = node.keys[keyIndex];
 					if(getLeft(node,keyIndex)) {
 						//If we have children we must give them to their parent, then run a fixup
 						//Exchange the separator with the greatest value in the leftmost subtree
 						Reference<Node> leftPtr = D(getLeft(node,keyIndex));
 						Node left = leftPtr;
-						Key separator = left.keys[left.length-1];
-						left.keys[left.length-1].val = node.keys[keyIndex];
-						node.keys[keyIndex].val = separator;
+						T separator = left.keys[left.length-1];
+						left.keys[left.length-1] = node.keys[keyIndex];
+						node.keys[keyIndex] = separator;
 						//Update on-disk layout
 						nodeptr = node;
 						leftPtr = left;
@@ -738,7 +738,7 @@ public:
 
 					}
 					else {
-						//Remove element from node
+						//Remove element from node (don't need to worry about children because this is a leaf node)
 						node.length--;
 						memmove(node.keys + keyIndex, node.keys + keyIndex + 1, (node.length - keyIndex)*sizeof(*node.keys));
 						nodeptr = node;
@@ -798,7 +798,7 @@ public:
 
 			}
 			//Callback
-			callback(root.keys[i].val);
+			callback(root.keys[i]);
 			//Traverse right sub-tree if exists
 			if(getRight(root,i)) {
 				if(D(getRight(root,i)).val().parent != rootPtr.offset) {
