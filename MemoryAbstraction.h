@@ -641,7 +641,6 @@ public:
 			if(isLeft) {
 				node.keys[node.length] = parent.keys[parentmarker];
 			}else {
-				//memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
 				node.nodemove(1,0,node.length);
 				node.keys[0] = parent.keys[parentmarker];
 
@@ -675,6 +674,11 @@ public:
 				//memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,(parent.length-parentmarker)*sizeof(parent.keys[0]));
 				printf("TODO: This line is really screwing stuff up\n");
 				parent.nodemove(parentmarker,parentmarker+1,parent.length-parentmarker);
+				if(isLeft) {
+					parent.children[parentmarker] = nodePtr.offset;
+				}else {
+					parent.children[parentmarker+1] = nodePtr.offset;
+				}
 				parent.length--;
 				parentPtr = parent;
 				//Move the node over to the neighboring element
@@ -700,14 +704,15 @@ public:
 							printf("Still parent problems\n");
 						}
 						//Insert ourselves into our parent again
+						/*
 						parentmarker = FindInParent(node,parent);
 						if(node.keys[0]<parent.keys[parentmarker]) {
-							getLeft(parent,parentmarker) = nodePtr.offset;
+							//getLeft(parent,parentmarker) = nodePtr.offset;
 						}else {
-							getRight(parent,parentmarker) = nodePtr.offset;
+							//getRight(parent,parentmarker) = nodePtr.offset;
 						}
 						parentPtr = parent;
-
+*/
 					}
 				}
 
@@ -788,9 +793,11 @@ public:
 	template<typename F>
 	void Traverse(Reference<Node> rootPtr, const F& callback) {
 		Node root = rootPtr;
+		//printf("PROBLEM IDENTIFIED\n:TREE TRAVERSAL VISITS SAME NODE TWICE:\nHappens because we are only incrementing by one\nbut getting left and right values EACH time.");
+
 		for(int i = 0;i<root.length;i++) {
 			//Traverse left sub-tree if exists
-			if(getLeft(root,i)) {
+			if(getLeft(root,i) && i==0) {
 				if(D(getLeft(root,i)).val().parent != rootPtr.offset) {
 					throw "down";
 				}
