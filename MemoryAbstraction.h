@@ -618,16 +618,17 @@ public:
 			if(isLeft) {
 				//Rotate left
 				//Losing the children of the siblings
+
 				printf("TODO: CHILDREN ARE GETTING LOST IN ROTATIONS\n");
 				//Experimental fix for lost children
 				uint64_t lostchildren[2];
 				lostchildren[0] = sibling.children[0];
 				lostchildren[1] = sibling.children[1];
 				//throw "down";
-				//Move from parent value to left node
-				node.keys[node.length] = parent.keys[parentmarker];
-				//Move the value from the right node into the parent
-				parent.keys[parentmarker] = sibling.keys[0];
+				//Swap the parent with the left node
+				std::swap(node.keys[node.length],parent.keys[parentmarker]);
+				//Swap the right node with the parent
+				std::swap(parent.keys[parentmarker],sibling.keys[0]);
 				sibling.nodemove(0,1,sibling.length);
 				sibling.length--;
 				node.children[node.length] = lostchildren[0];
@@ -637,7 +638,6 @@ public:
 				fixupParents(nodePtr,node);
 			}else {
 				//Rotate right
-
 				printf("TODO: CHILDREN ARE GETTING LOST IN ROTATIONS");
 				//Fix for lost children
 				uint64_t lostkids[2];
@@ -646,8 +646,8 @@ public:
 				//throw "down";
 				//memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
 				node.nodemove(1,0,node.length);
-				node.keys[0] = parent.keys[parentmarker];
-				parent.keys[parentmarker] = sibling.keys[sibling.length-1];
+				std::swap(node.keys[0],parent.keys[parentmarker]);
+				std::swap(parent.keys[parentmarker],sibling.keys[sibling.length-1]);
 				sibling.length--;
 				node.children[0] = lostkids[0];
 				node.children[1] = lostkids[1];
