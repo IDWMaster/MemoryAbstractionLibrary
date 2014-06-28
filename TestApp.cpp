@@ -58,13 +58,14 @@ int main(int argc, char** argv)  {
 		uint64_t rootptr;
 		MemoryAllocator m(&mstr,rootptr,sizeof(mander));
 
-	Reference<BTree<int,2>::Node> mref;
+#define ORDER 2
+	Reference<BTree<int,ORDER>::Node> mref;
 	if(rootptr == 0) {
-		mref = m.Allocate<BTree<int,2>::Node>();
+		mref = m.Allocate<BTree<int,ORDER>::Node>();
 	}else {
-		mref = Reference<BTree<int,2>::Node>(&mstr,rootptr);
+		mref = Reference<BTree<int,ORDER>::Node>(&mstr,rootptr);
 	}
-	BTree<int,2> tree(&m,mref);
+	BTree<int,ORDER> tree(&m,mref);
 	auto printfunc = [&]() {
 	  std::cout<<"Printing\n";
 	  tree.Traverse([&](const int& entry){

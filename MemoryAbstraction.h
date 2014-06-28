@@ -336,7 +336,7 @@ public:
 	//Node is a leaf if it has no children
 		bool IsLeaf(const Node& val) {
 			for(size_t i = 0;i<KeyCount+1;i++) {
-				if(getLeft(val,i) || getRight(val,i)) {
+				if(getLeft(val,i)) {
 					return false;
 				}
 			}
@@ -428,6 +428,14 @@ public:
 	void nodecopy(Node& dest, Node& src, size_t destoffset, size_t srcoffset, size_t len) {
 		memcpy(dest.keys+destoffset,src.keys+srcoffset,len*sizeof(src.keys[0]));
 		memcpy(dest.children+destoffset,src.children+srcoffset,(len+1)*sizeof(src.children[0]));
+
+	}
+	void findGlobalMax(Reference<Node>& nodePtr, Node& node) {
+		if(node.children[node.length-1]) {
+			nodePtr = D(node.children[node.length]);
+			node = nodePtr;
+			findGlobalMax(nodePtr,node);
+		}
 
 	}
 	void Insert(Key value, Reference<Node> root, bool treatAsLeaf = false) {
@@ -596,6 +604,8 @@ public:
 		}
 	}
 	void Rebalance(Reference<Node> nodePtr) {
+		printf("\nNOTICE:\nREBALANCING DISABLED\nTEMPORARILY FOR TESTING\n");
+return;
 		Node node = nodePtr;
 		bool isLeft;
 		Reference<Node> siblingPtr = D(FindSibling(nodePtr,isLeft));
@@ -745,6 +755,7 @@ public:
 						//Exchange the separator with the greatest value in the leftmost subtree
 						Reference<Node> leftPtr = D(getLeft(node,keyIndex));
 						Node left = leftPtr;
+						findGlobalMax(leftPtr,left);
 						T separator = left.keys[left.length-1];
 						left.keys[left.length-1] = node.keys[keyIndex];
 						node.keys[keyIndex] = separator;
