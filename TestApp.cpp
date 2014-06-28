@@ -58,39 +58,24 @@ int main(int argc, char** argv)  {
 		uint64_t rootptr;
 		MemoryAllocator m(&mstr,rootptr,sizeof(mander));
 
-	Reference<BTree<FileEntry,2>::Node> mref;
+	Reference<BTree<int,2>::Node> mref;
 	if(rootptr == 0) {
-		mref = m.Allocate<BTree<FileEntry,2>::Node>();
+		mref = m.Allocate<BTree<int,2>::Node>();
 	}else {
-		mref = Reference<BTree<FileEntry,2>::Node>(&mstr,rootptr);
+		mref = Reference<BTree<int,2>::Node>(&mstr,rootptr);
 	}
-	BTree<FileEntry,2> tree(&m,mref);
+	BTree<int,2> tree(&m,mref);
 	auto printfunc = [&]() {
 	  std::cout<<"Printing\n";
-	  tree.Traverse([&](const FileEntry& entry){
-	    std::cout<<entry.filename<<std::endl;
+	  tree.Traverse([&](const int& entry){
+	    std::cout<<entry<<std::endl;
 	  });
 	};
-	printfunc();
-	FileEntry searchvalue;
-	searchvalue = std::string("a");
-	tree.Insert(searchvalue);
-	searchvalue = std::string("b");
-	tree.Insert(searchvalue);
-	searchvalue = std::string("c");
-	tree.Insert(searchvalue);
-	searchvalue = std::string("d");
-	tree.Insert(searchvalue);
-	searchvalue = std::string("e");
- 	tree.Insert(searchvalue);
-	printfunc();
-	searchvalue = std::string("f");
-	tree.Insert(searchvalue);
-	printfunc();
-	searchvalue = std::string("g");
-	tree.Insert(searchvalue);
-	searchvalue = std::string("f");
-	tree.Delete(searchvalue);
+	for(int i = 0;i<=20;i++) {
+		tree.Insert(i);
+	}
+	tree.Delete(0);
+
 	printfunc();
 
 	return 0;

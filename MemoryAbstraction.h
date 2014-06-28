@@ -314,11 +314,14 @@ public:
 				length = 0;
 			}
 			void nodemove(size_t destoffset, size_t srcoffset, size_t len) {
+				if(len == 0) {
+					return;
+				}
 				//Zero-fill memmove
 				memmove(keys+destoffset,keys+srcoffset,len);
-				memset(keys+srcoffset,0,len*sizeof(keys[0]));
-				memmove(children+destoffset,children+srcoffset,(len+1)*sizeof(children[0]));
-				memset(children+srcoffset,0,(len+1)*sizeof(children[0]));
+				//memset(keys+srcoffset,0,len*sizeof(keys[0]));
+				memmove(children+destoffset,children+srcoffset,(len)*sizeof(children[0]));
+				//memset(children+srcoffset,0,(len-1)*sizeof(children[0]));
 				printf("TODO: TEST THIS\n");
 			}
 			size_t Insert(const Key& val) {
@@ -610,21 +613,25 @@ public:
 		if(sibling.length>KeyCount/2) {
 			//we have a sibling with enough nodes!
 			printf("Kids happen\n");
+			//TODO: PROBLEM is that we must rotate BOTH keys AND children when performing a rotation
+			//as illustrated in this article: http://en.wikipedia.org/wiki/Tree_rotation
 			if(isLeft) {
 				//Rotate left
-				printf("TODO: UPDATE ROTATIONS TO MOVE CHILDREN AROUND AS WELL");
-				throw "down";
-				node.keys[node.length-1] = parent.keys[parentmarker];
+				//Losing the children of the siblings
+				printf("TODO: CHILDREN ARE GETTING LOST IN ROTATIONS\n");
+				//throw "down";
+				node.keys[node.length] = parent.keys[parentmarker];
 				parent.keys[parentmarker] = sibling.keys[0];
-				memmove(sibling.keys,sibling.keys+1,sibling.length*sizeof(sibling.keys[0]));
+				sibling.nodemove(0,1,sibling.length);
 				sibling.length--;
 				node.length++;
 			}else {
 				//Rotate right
 
-				printf("TODO: UPDATE ROTATIONS TO MOVE CHILDREN AROUND AS WELL");
-				throw "down";
-				memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
+				printf("TODO: CHILDREN ARE GETTING LOST IN ROTATIONS");
+				//throw "down";
+				//memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
+				node.nodemove(1,0,node.length);
 				node.keys[0] = parent.keys[parentmarker];
 				parent.keys[parentmarker] = sibling.keys[sibling.length-1];
 				sibling.length--;
@@ -672,7 +679,6 @@ public:
 				fixupParents(nodePtr,node);
 				//Remove the separator from the parent
 				//memmove(parent.keys+parentmarker,parent.keys+parentmarker+1,(parent.length-parentmarker)*sizeof(parent.keys[0]));
-				printf("TODO: This line is really screwing stuff up\n");
 				parent.nodemove(parentmarker,parentmarker+1,parent.length-parentmarker);
 				if(isLeft) {
 					parent.children[parentmarker] = nodePtr.offset;
@@ -703,16 +709,6 @@ public:
 						if(parent.length<KeyCount/2) {
 							printf("Still parent problems\n");
 						}
-						//Insert ourselves into our parent again
-						/*
-						parentmarker = FindInParent(node,parent);
-						if(node.keys[0]<parent.keys[parentmarker]) {
-							//getLeft(parent,parentmarker) = nodePtr.offset;
-						}else {
-							//getRight(parent,parentmarker) = nodePtr.offset;
-						}
-						parentPtr = parent;
-*/
 					}
 				}
 
