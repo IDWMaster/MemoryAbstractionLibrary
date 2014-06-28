@@ -321,7 +321,7 @@ public:
 				memmove(keys+destoffset,keys+srcoffset,len);
 				//memset(keys+srcoffset,0,len*sizeof(keys[0]));
 				memmove(children+destoffset,children+srcoffset,(len)*sizeof(children[0]));
-				memset(children+srcoffset,0,(len-1)*sizeof(children[0]));
+				//memset(children+srcoffset,0,(len-1)*sizeof(children[0]));
 				printf("TODO: TEST THIS\n");
 			}
 			size_t Insert(const Key& val) {
