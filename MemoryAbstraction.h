@@ -633,6 +633,9 @@ public:
 				sibling.length--;
 				node.children[node.length] = lostchildren[0];
 				node.children[node.length+1] = lostchildren[1];
+				//????
+				sibling.children[0] = 0;
+				sibling.children[1]= 0;
 				node.length++;
 				//TODO: Fixup parents
 				fixupParents(nodePtr,node);
