@@ -321,7 +321,7 @@ public:
 				memmove(keys+destoffset,keys+srcoffset,len);
 				//memset(keys+srcoffset,0,len*sizeof(keys[0]));
 				memmove(children+destoffset,children+srcoffset,(len)*sizeof(children[0]));
-				//memset(children+srcoffset,0,(len-1)*sizeof(children[0]));
+				memset(children+srcoffset,0,(len-1)*sizeof(children[0]));
 				printf("TODO: TEST THIS\n");
 			}
 			size_t Insert(const Key& val) {
@@ -604,8 +604,13 @@ public:
 		}
 	}
 	void Rebalance(Reference<Node> nodePtr) {
-		printf("\nNOTICE:\nREBALANCING DISABLED\nTEMPORARILY FOR TESTING\n");
-return;
+		//printf("\nNOTICE:\nREBALANCING DISABLED\nTEMPORARILY FOR TESTING\n");
+//return;
+
+		Traverse([=](const T& val){
+			std::cout<<val<<std::endl;
+		});
+
 		Node node = nodePtr;
 		bool isLeft;
 		Reference<Node> siblingPtr = D(FindSibling(nodePtr,isLeft));
@@ -630,22 +635,15 @@ return;
 				//Losing the children of the siblings
 
 				printf("TODO: CHILDREN ARE GETTING LOST IN ROTATIONS\n");
-				//Experimental fix for lost children
-				uint64_t lostchildren[2];
-				lostchildren[0] = sibling.children[0];
-				lostchildren[1] = sibling.children[1];
 				//throw "down";
 				//Swap the parent with the left node
+				node.children[node.length+1]= sibling.children[0];
 				std::swap(node.keys[node.length],parent.keys[parentmarker]);
 				//Swap the right node with the parent
 				std::swap(parent.keys[parentmarker],sibling.keys[0]);
+					//TODO: This causes loss of kids. What to do?
 				sibling.nodemove(0,1,sibling.length);
 				sibling.length--;
-				node.children[node.length] = lostchildren[0];
-				node.children[node.length+1] = lostchildren[1];
-				//????
-				sibling.children[0] = 0;
-				sibling.children[1]= 0;
 				node.length++;
 				//TODO: Fixup parents
 				fixupParents(nodePtr,node);
@@ -653,17 +651,17 @@ return;
 				//Rotate right
 				printf("TODO: CHILDREN ARE GETTING LOST IN ROTATIONS");
 				//Fix for lost children
-				uint64_t lostkids[2];
-				lostkids[0] = sibling.children[sibling.length-1];
-				lostkids[1] = sibling.children[sibling.length];
 				//throw "down";
 				//memmove(node.keys+1,node.keys,node.length*sizeof(node.keys[0]));
+				//Make room for the new key
 				node.nodemove(1,0,node.length);
+				//Pre-emptively move the kid over
+				node.children[0] = sibling.children[sibling.length];
+				//Put the separator into the node
 				std::swap(node.keys[0],parent.keys[parentmarker]);
+				//Put the key into the separator
 				std::swap(parent.keys[parentmarker],sibling.keys[sibling.length-1]);
 				sibling.length--;
-				node.children[0] = lostkids[0];
-				node.children[1] = lostkids[1];
 				node.length++;
 				//TODO: Fixup parents
 				fixupParents(nodePtr,node);

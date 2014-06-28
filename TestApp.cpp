@@ -72,11 +72,14 @@ int main(int argc, char** argv)  {
 	    std::cout<<entry<<std::endl;
 	  });
 	};
+	//TODO: Successful tests: INSERT, REMOVE, ROTATE LEFT, ROTATE RIGHT, MERGE LEFT
+	//TODO: Pending tests: SEARCH, MERGE RIGHT, MERGE LEFT ROOT, MERGE RIGHT ROOT
+
 	for(int i = 0;i<=20;i++) {
 		tree.Insert(i);
 	}
-	tree.Delete(7);
-
+	tree.Delete(0);
+	//This should cause a rotation to the RIGHT
 	printfunc();
 
 	return 0;
