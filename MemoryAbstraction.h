@@ -607,9 +607,6 @@ public:
 		//printf("\nNOTICE:\nREBALANCING DISABLED\nTEMPORARILY FOR TESTING\n");
 //return;
 
-		Traverse([=](const T& val){
-			std::cout<<val<<std::endl;
-		});
 
 		Node node = nodePtr;
 		bool isLeft;
