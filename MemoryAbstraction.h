@@ -772,7 +772,8 @@ public:
 						nodeptr = node;
 
 					}
-					if(node.length < KeyCount/2) {
+					//Only rebalance if we are root
+					if((node.length < KeyCount/2) && node.parent !=0) {
 						//rebalancerefs.push_back(nodeptr.offset);
 						Rebalance(nodeptr);
 						//throw "up";
